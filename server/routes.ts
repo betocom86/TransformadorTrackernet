@@ -82,7 +82,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Root endpoint for deployment health checks (production only to avoid Vite conflicts)
+  // Root endpoint for deployment health checks - CRITICAL for deployment success
+  // Only enable in production to avoid conflicts with Vite dev server
   if (process.env.NODE_ENV === 'production') {
     app.get('/', (req, res) => {
       res.status(200).json({ 

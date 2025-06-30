@@ -71,25 +71,27 @@ app.use((req, res, next) => {
   const environment = process.env.NODE_ENV || "development";
   
     server.listen(port, host, () => {
+      // Set serverReady flag IMMEDIATELY for deployment health checks
       serverReady = true;
       log(`serving on ${host}:${port}`);
       log(`Environment: ${environment}`);
       log('Server is ready for health checks');
       
       // Initialize database with seed data after server is running (non-blocking)
-      setTimeout(() => {
-        seedDatabase().then(() => {
-          log("Database seeding completed");
-        }).catch(err => {
-          log(`Seed warning: ${err.message}`);
-        });
-        
+      // Use setImmediate for fastest health check response
+      setImmediate(() => {
         seedUsers().then(() => {
           log("User seeding completed");
         }).catch(err => {
           log(`Users warning: ${err.message}`);
         });
-      }, 100); // Minimal delay for seeding to allow immediate health check responses
+        
+        seedDatabase().then(() => {
+          log("Database seeding completed");
+        }).catch(err => {
+          log(`Seed warning: ${err.message}`);
+        });
+      });
     });
     
     // Graceful shutdown handling
