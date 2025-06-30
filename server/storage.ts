@@ -13,10 +13,15 @@ import type {
   WorkOrder, InsertWorkOrder,
   Route, InsertRoute,
   WorkOrderPhoto, InsertWorkOrderPhoto,
-  WorkOrderStep, InsertWorkOrderStep
+  WorkOrderStep, InsertWorkOrderStep,
+  Transformer, InsertTransformer,
+  ProcedureCatalog, InsertProcedureCatalog,
+  WorkOrderTransformer, InsertWorkOrderTransformer,
+  TransformerProcedure, InsertTransformerProcedure,
+  TransformerProcedurePhoto, InsertTransformerProcedurePhoto
 } from "@shared/schema";
 import { db } from "./db";
-import { users, userSessions, personnel, documents, projects, projectAssignments, safetyEquipment, training, alerts, crews, crewMembers, workOrders, routes, workOrderPhotos, workOrderSteps } from "@shared/schema";
+import { users, userSessions, personnel, documents, projects, projectAssignments, safetyEquipment, training, alerts, crews, crewMembers, workOrders, routes, workOrderPhotos, workOrderSteps, transformers, procedureCatalog, workOrderTransformers, transformerProcedures, transformerProcedurePhotos } from "@shared/schema";
 import { eq, and, lte, gte, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -141,6 +146,38 @@ export interface IStorage {
   createWorkOrderStep(step: InsertWorkOrderStep): Promise<WorkOrderStep>;
   updateWorkOrderStep(id: number, step: Partial<InsertWorkOrderStep>): Promise<WorkOrderStep | undefined>;
   completeWorkOrderStep(id: number, completedBy: number): Promise<boolean>;
+
+  // Transformers
+  getAllTransformers(): Promise<Transformer[]>;
+  getTransformer(id: number): Promise<Transformer | undefined>;
+  createTransformer(transformer: InsertTransformer): Promise<Transformer>;
+  updateTransformer(id: number, transformer: Partial<InsertTransformer>): Promise<Transformer | undefined>;
+  deleteTransformer(id: number): Promise<boolean>;
+  getTransformerBySerial(serialNumber: string): Promise<Transformer | undefined>;
+
+  // Procedure Catalog
+  getAllProcedures(): Promise<ProcedureCatalog[]>;
+  getProcedure(id: number): Promise<ProcedureCatalog | undefined>;
+  createProcedure(procedure: InsertProcedureCatalog): Promise<ProcedureCatalog>;
+  updateProcedure(id: number, procedure: Partial<InsertProcedureCatalog>): Promise<ProcedureCatalog | undefined>;
+  deleteProcedure(id: number): Promise<boolean>;
+  getProceduresByCategory(category: string): Promise<ProcedureCatalog[]>;
+
+  // Work Order Transformers
+  getWorkOrderTransformers(workOrderId: number): Promise<WorkOrderTransformer[]>;
+  addTransformerToWorkOrder(workOrderTransformer: InsertWorkOrderTransformer): Promise<WorkOrderTransformer>;
+  removeTransformerFromWorkOrder(id: number): Promise<boolean>;
+
+  // Transformer Procedures
+  getTransformerProcedures(transformerId: number, workOrderId?: number): Promise<TransformerProcedure[]>;
+  createTransformerProcedure(procedure: InsertTransformerProcedure): Promise<TransformerProcedure>;
+  updateTransformerProcedure(id: number, procedure: Partial<InsertTransformerProcedure>): Promise<TransformerProcedure | undefined>;
+  completeTransformerProcedure(id: number, performedBy: number): Promise<boolean>;
+
+  // Transformer Procedure Photos
+  getTransformerProcedurePhotos(procedureId: number): Promise<TransformerProcedurePhoto[]>;
+  createTransformerProcedurePhoto(photo: InsertTransformerProcedurePhoto): Promise<TransformerProcedurePhoto>;
+  deleteTransformerProcedurePhoto(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -739,6 +776,162 @@ export class DatabaseStorage implements IStorage {
         completedBy
       })
       .where(eq(workOrderSteps.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Transformers implementation
+  async getAllTransformers(): Promise<Transformer[]> {
+    return await db.select().from(transformers).orderBy(transformers.serialNumber);
+  }
+
+  async getTransformer(id: number): Promise<Transformer | undefined> {
+    const [transformer] = await db.select().from(transformers).where(eq(transformers.id, id));
+    return transformer || undefined;
+  }
+
+  async createTransformer(insertTransformer: InsertTransformer): Promise<Transformer> {
+    const [transformer] = await db
+      .insert(transformers)
+      .values(insertTransformer)
+      .returning();
+    return transformer;
+  }
+
+  async updateTransformer(id: number, update: Partial<InsertTransformer>): Promise<Transformer | undefined> {
+    const [transformer] = await db
+      .update(transformers)
+      .set(update)
+      .where(eq(transformers.id, id))
+      .returning();
+    return transformer || undefined;
+  }
+
+  async deleteTransformer(id: number): Promise<boolean> {
+    const result = await db.delete(transformers).where(eq(transformers.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getTransformerBySerial(serialNumber: string): Promise<Transformer | undefined> {
+    const [transformer] = await db.select().from(transformers).where(eq(transformers.serialNumber, serialNumber));
+    return transformer || undefined;
+  }
+
+  // Procedure Catalog implementation
+  async getAllProcedures(): Promise<ProcedureCatalog[]> {
+    return await db.select().from(procedureCatalog).where(eq(procedureCatalog.isActive, true)).orderBy(procedureCatalog.code);
+  }
+
+  async getProcedure(id: number): Promise<ProcedureCatalog | undefined> {
+    const [procedure] = await db.select().from(procedureCatalog).where(eq(procedureCatalog.id, id));
+    return procedure || undefined;
+  }
+
+  async createProcedure(insertProcedure: InsertProcedureCatalog): Promise<ProcedureCatalog> {
+    const [procedure] = await db
+      .insert(procedureCatalog)
+      .values(insertProcedure)
+      .returning();
+    return procedure;
+  }
+
+  async updateProcedure(id: number, update: Partial<InsertProcedureCatalog>): Promise<ProcedureCatalog | undefined> {
+    const [procedure] = await db
+      .update(procedureCatalog)
+      .set({ ...update, updatedAt: new Date() })
+      .where(eq(procedureCatalog.id, id))
+      .returning();
+    return procedure || undefined;
+  }
+
+  async deleteProcedure(id: number): Promise<boolean> {
+    const result = await db
+      .update(procedureCatalog)
+      .set({ isActive: false })
+      .where(eq(procedureCatalog.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getProceduresByCategory(category: string): Promise<ProcedureCatalog[]> {
+    return await db
+      .select()
+      .from(procedureCatalog)
+      .where(and(eq(procedureCatalog.category, category), eq(procedureCatalog.isActive, true)))
+      .orderBy(procedureCatalog.code);
+  }
+
+  // Work Order Transformers implementation
+  async getWorkOrderTransformers(workOrderId: number): Promise<WorkOrderTransformer[]> {
+    return await db.select().from(workOrderTransformers).where(eq(workOrderTransformers.workOrderId, workOrderId));
+  }
+
+  async addTransformerToWorkOrder(insertWorkOrderTransformer: InsertWorkOrderTransformer): Promise<WorkOrderTransformer> {
+    const [workOrderTransformer] = await db
+      .insert(workOrderTransformers)
+      .values(insertWorkOrderTransformer)
+      .returning();
+    return workOrderTransformer;
+  }
+
+  async removeTransformerFromWorkOrder(id: number): Promise<boolean> {
+    const result = await db.delete(workOrderTransformers).where(eq(workOrderTransformers.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Transformer Procedures implementation
+  async getTransformerProcedures(transformerId: number, workOrderId?: number): Promise<TransformerProcedure[]> {
+    let query = db.select().from(transformerProcedures).where(eq(transformerProcedures.transformerId, transformerId));
+    
+    if (workOrderId) {
+      query = query.where(eq(transformerProcedures.workOrderId, workOrderId));
+    }
+    
+    return await query.orderBy(transformerProcedures.createdAt);
+  }
+
+  async createTransformerProcedure(insertProcedure: InsertTransformerProcedure): Promise<TransformerProcedure> {
+    const [procedure] = await db
+      .insert(transformerProcedures)
+      .values(insertProcedure)
+      .returning();
+    return procedure;
+  }
+
+  async updateTransformerProcedure(id: number, update: Partial<InsertTransformerProcedure>): Promise<TransformerProcedure | undefined> {
+    const [procedure] = await db
+      .update(transformerProcedures)
+      .set(update)
+      .where(eq(transformerProcedures.id, id))
+      .returning();
+    return procedure || undefined;
+  }
+
+  async completeTransformerProcedure(id: number, performedBy: number): Promise<boolean> {
+    const result = await db
+      .update(transformerProcedures)
+      .set({
+        status: 'completed',
+        completedAt: new Date(),
+        performedBy
+      })
+      .where(eq(transformerProcedures.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Transformer Procedure Photos implementation
+  async getTransformerProcedurePhotos(procedureId: number): Promise<TransformerProcedurePhoto[]> {
+    return await db.select().from(transformerProcedurePhotos).where(eq(transformerProcedurePhotos.transformerProcedureId, procedureId));
+  }
+
+  async createTransformerProcedurePhoto(insertPhoto: InsertTransformerProcedurePhoto): Promise<TransformerProcedurePhoto> {
+    const [photo] = await db
+      .insert(transformerProcedurePhotos)
+      .values(insertPhoto)
+      .returning();
+    return photo;
+  }
+
+  async deleteTransformerProcedurePhoto(id: number): Promise<boolean> {
+    const result = await db.delete(transformerProcedurePhotos).where(eq(transformerProcedurePhotos.id, id));
     return (result.rowCount || 0) > 0;
   }
 }

@@ -45,6 +45,10 @@ PROSECU is a comprehensive personnel management system designed for construction
 - **Routes**: Optimized travel routes for crews with distance and time calculations
 - **Work Order Photos**: Image documentation with automatic watermarking capabilities
 - **Work Order Steps**: Task breakdown and progress tracking for service completion
+- **Transformers**: Complete transformer inventory with serial numbers, specifications, and status tracking
+- **Procedure Catalog**: Knowledge base of technical procedures with detailed instructions and safety requirements
+- **Transformer Procedures**: Application of specific procedures to transformers in work orders
+- **Procedure Photos**: Photo documentation for each procedure step with automatic watermarking
 
 ### Authentication & Authorization
 - Session-based authentication with PostgreSQL session store
@@ -121,6 +125,7 @@ PROSECU is a comprehensive personnel management system designed for construction
 - File upload directory configuration
 
 ## Changelog
+- June 30, 2025: Enhanced work orders with GPS coordinates, postal codes, automatic geolocation, transformer inventory management, and technical procedure knowledge base
 - June 30, 2025: Field service management system completed with crew management, work orders with photo uploads and watermarking, route optimization, and mobile-friendly interfaces
 - June 30, 2025: Sistema completo implementado con PostgreSQL, gestión de usuarios, cumplimiento de 45 requisitos, y branding GC Electric aplicado
 - June 30, 2025: Initial setup

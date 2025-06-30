@@ -14,6 +14,8 @@ import Compliance from "@/pages/compliance";
 import Crews from "@/pages/crews";
 import WorkOrders from "@/pages/work-orders";
 import Routes from "@/pages/routes";
+import Procedures from "@/pages/procedures";
+import Transformers from "@/pages/transformers";
 import Login from "@/pages/login";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
@@ -55,6 +57,8 @@ function Router() {
             <Route path="/cuadrillas" component={Crews} />
             <Route path="/ordenes-trabajo" component={WorkOrders} />
             <Route path="/rutas" component={Routes} />
+            <Route path="/procedimientos" component={Procedures} />
+            <Route path="/transformadores" component={Transformers} />
             <Route path="/login" component={Login} />
             <Route component={NotFound} />
           </Switch>

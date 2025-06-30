@@ -991,6 +991,286 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ====== TRANSFORMADORES ======
+  app.get("/api/transformers", async (req, res) => {
+    try {
+      const transformers = await storage.getAllTransformers();
+      res.json(transformers);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching transformers" });
+    }
+  });
+
+  app.get("/api/transformers/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const transformer = await storage.getTransformer(id);
+      if (!transformer) {
+        return res.status(404).json({ message: "Transformer not found" });
+      }
+      res.json(transformer);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching transformer" });
+    }
+  });
+
+  app.post("/api/transformers", async (req, res) => {
+    try {
+      const transformerData = {
+        ...req.body,
+        status: req.body.status || 'active'
+      };
+      const transformer = await storage.createTransformer(transformerData);
+      res.status(201).json(transformer);
+    } catch (error) {
+      res.status(400).json({ message: "Error creating transformer", error });
+    }
+  });
+
+  app.put("/api/transformers/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const transformer = await storage.updateTransformer(id, req.body);
+      if (!transformer) {
+        return res.status(404).json({ message: "Transformer not found" });
+      }
+      res.json(transformer);
+    } catch (error) {
+      res.status(400).json({ message: "Error updating transformer", error });
+    }
+  });
+
+  app.delete("/api/transformers/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteTransformer(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Transformer not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting transformer" });
+    }
+  });
+
+  // ====== CATÁLOGO DE PROCEDIMIENTOS ======
+  app.get("/api/procedures", async (req, res) => {
+    try {
+      const category = req.query.category as string;
+      let procedures;
+      
+      if (category && category !== 'all') {
+        procedures = await storage.getProceduresByCategory(category);
+      } else {
+        procedures = await storage.getAllProcedures();
+      }
+      
+      res.json(procedures);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching procedures" });
+    }
+  });
+
+  app.get("/api/procedures/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const procedure = await storage.getProcedure(id);
+      if (!procedure) {
+        return res.status(404).json({ message: "Procedure not found" });
+      }
+      res.json(procedure);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching procedure" });
+    }
+  });
+
+  app.post("/api/procedures", async (req, res) => {
+    try {
+      const procedure = await storage.createProcedure(req.body);
+      res.status(201).json(procedure);
+    } catch (error) {
+      res.status(400).json({ message: "Error creating procedure", error });
+    }
+  });
+
+  app.put("/api/procedures/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const procedure = await storage.updateProcedure(id, req.body);
+      if (!procedure) {
+        return res.status(404).json({ message: "Procedure not found" });
+      }
+      res.json(procedure);
+    } catch (error) {
+      res.status(400).json({ message: "Error updating procedure", error });
+    }
+  });
+
+  app.delete("/api/procedures/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteProcedure(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Procedure not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting procedure" });
+    }
+  });
+
+  // ====== TRANSFORMADORES EN ÓRDENES DE TRABAJO ======
+  app.get("/api/work-orders/:id/transformers", async (req, res) => {
+    try {
+      const workOrderId = parseInt(req.params.id);
+      const transformers = await storage.getWorkOrderTransformers(workOrderId);
+      res.json(transformers);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching work order transformers" });
+    }
+  });
+
+  app.post("/api/work-orders/:id/transformers", async (req, res) => {
+    try {
+      const workOrderId = parseInt(req.params.id);
+      const { transformerId } = req.body;
+      
+      const workOrderTransformer = await storage.addTransformerToWorkOrder({
+        workOrderId,
+        transformerId
+      });
+      
+      res.status(201).json(workOrderTransformer);
+    } catch (error) {
+      res.status(400).json({ message: "Error adding transformer to work order", error });
+    }
+  });
+
+  // ====== PROCEDIMIENTOS DE TRANSFORMADOR ======
+  app.get("/api/transformers/:id/procedures", async (req, res) => {
+    try {
+      const transformerId = parseInt(req.params.id);
+      const workOrderId = req.query.workOrderId ? parseInt(req.query.workOrderId as string) : undefined;
+      
+      const procedures = await storage.getTransformerProcedures(transformerId, workOrderId);
+      res.json(procedures);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching transformer procedures" });
+    }
+  });
+
+  app.post("/api/transformer-procedures", async (req, res) => {
+    try {
+      const procedure = await storage.createTransformerProcedure(req.body);
+      res.status(201).json(procedure);
+    } catch (error) {
+      res.status(400).json({ message: "Error creating transformer procedure", error });
+    }
+  });
+
+  app.put("/api/transformer-procedures/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const procedure = await storage.updateTransformerProcedure(id, req.body);
+      if (!procedure) {
+        return res.status(404).json({ message: "Transformer procedure not found" });
+      }
+      res.json(procedure);
+    } catch (error) {
+      res.status(400).json({ message: "Error updating transformer procedure", error });
+    }
+  });
+
+  app.put("/api/transformer-procedures/:id/complete", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = (req.session as any)?.userId;
+      const success = await storage.completeTransformerProcedure(id, userId);
+      if (!success) {
+        return res.status(404).json({ message: "Procedure not found" });
+      }
+      res.json({ message: "Procedure completed successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Error completing procedure" });
+    }
+  });
+
+  // ====== FOTOS DE PROCEDIMIENTOS DE TRANSFORMADOR ======
+  app.get("/api/transformer-procedures/:id/photos", async (req, res) => {
+    try {
+      const procedureId = parseInt(req.params.id);
+      const photos = await storage.getTransformerProcedurePhotos(procedureId);
+      res.json(photos);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching procedure photos" });
+    }
+  });
+
+  app.post("/api/transformer-procedures/:id/photos", upload.array('photos', 10), async (req, res) => {
+    try {
+      const procedureId = parseInt(req.params.id);
+      const files = req.files as Express.Multer.File[];
+      const { photoType, description, personnelName } = req.body;
+      const userId = (req.session as any)?.userId;
+
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No photos uploaded" });
+      }
+
+      const uploadedPhotos = [];
+
+      for (const file of files) {
+        try {
+          // Process photo with watermark for transformer procedure
+          const { watermarkedPath, originalPath } = await processWorkOrderPhoto(
+            file.path,
+            `PROC-${procedureId}`,
+            personnelName || 'Técnico',
+            photoType || 'procedure'
+          );
+
+          const photoData = {
+            transformerProcedureId: procedureId,
+            photoType: photoType || 'procedure',
+            filePath: watermarkedPath,
+            fileName: file.originalname,
+            description: description || null,
+            takenBy: userId,
+            hasWatermark: true
+          };
+
+          const savedPhoto = await storage.createTransformerProcedurePhoto(photoData);
+          uploadedPhotos.push(savedPhoto);
+
+        } catch (photoError) {
+          console.error('Error processing procedure photo:', photoError);
+        }
+      }
+
+      res.status(201).json({
+        message: `${uploadedPhotos.length} photos uploaded successfully`,
+        photos: uploadedPhotos
+      });
+
+    } catch (error) {
+      console.error('Error uploading procedure photos:', error);
+      res.status(500).json({ message: "Error uploading photos", error });
+    }
+  });
+
+  app.delete("/api/transformer-procedure-photos/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteTransformerProcedurePhoto(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Photo not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting photo" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

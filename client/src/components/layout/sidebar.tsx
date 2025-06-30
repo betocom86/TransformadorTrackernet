@@ -14,6 +14,8 @@ import {
   UsersIcon,
   Zap,
   MapPin,
+  BookOpen,
+  Settings,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -77,6 +79,16 @@ const menuItems = [
         name: "Rutas Optimizadas",
         href: "/rutas",
         icon: MapPin,
+      },
+      {
+        name: "Transformadores",
+        href: "/transformadores",
+        icon: Zap,
+      },
+      {
+        name: "Procedimientos",
+        href: "/procedimientos",
+        icon: BookOpen,
       },
       {
         name: "Asignaciones",

@@ -28,6 +28,7 @@ interface WorkOrder {
   address: string;
   city: string;
   state: string;
+  zipCode?: string;
   latitude?: number;
   longitude?: number;
   assignedCrewId?: number;
@@ -66,6 +67,9 @@ const workOrderSchema = z.object({
   address: z.string().min(1, "Dirección requerida"),
   city: z.string().min(1, "Ciudad requerida"),
   state: z.string().min(1, "Estado requerido"),
+  zipCode: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
   scheduledDate: z.string().optional(),
   estimatedDuration: z.number().optional(),
   clientContact: z.string().optional(),
@@ -170,6 +174,9 @@ export default function WorkOrders() {
       address: "",
       city: "",
       state: "",
+      zipCode: "",
+      latitude: undefined,
+      longitude: undefined,
       scheduledDate: "",
       clientContact: "",
       clientPhone: "",
@@ -413,7 +420,7 @@ export default function WorkOrders() {
                   )}
                 />
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="city"
@@ -441,6 +448,130 @@ export default function WorkOrders() {
                       </FormItem>
                     )}
                   />
+                  
+                  <FormField
+                    control={form.control}
+                    name="zipCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Código Postal</FormLabel>
+                        <FormControl>
+                          <Input placeholder="03100" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                {/* Coordenadas GPS */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium">Coordenadas GPS</h4>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        if (!navigator.geolocation) {
+                          toast({
+                            title: "Geolocalización no disponible",
+                            description: "Tu navegador no soporta geolocalización",
+                            variant: "destructive"
+                          });
+                          return;
+                        }
+
+                        try {
+                          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                            navigator.geolocation.getCurrentPosition(resolve, reject, {
+                              enableHighAccuracy: true,
+                              timeout: 10000,
+                              maximumAge: 60000
+                            });
+                          });
+
+                          form.setValue("latitude", position.coords.latitude);
+                          form.setValue("longitude", position.coords.longitude);
+                          
+                          toast({
+                            title: "Ubicación obtenida",
+                            description: `Lat: ${position.coords.latitude.toFixed(6)}, Lng: ${position.coords.longitude.toFixed(6)}`
+                          });
+                        } catch (error) {
+                          toast({
+                            title: "Error de geolocalización",
+                            description: "No se pudo obtener la ubicación actual",
+                            variant: "destructive"
+                          });
+                        }
+                      }}
+                    >
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Obtener Ubicación Actual
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="latitude"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Latitud</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              step="any"
+                              placeholder="19.432608"
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="longitude"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Longitud</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              step="any"
+                              placeholder="-99.133208"
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  {form.watch("latitude") && form.watch("longitude") && (
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <p className="text-sm text-green-800">
+                        <MapPin className="h-4 w-4 inline mr-1" />
+                        Coordenadas: {form.watch("latitude")?.toFixed(6)}, {form.watch("longitude")?.toFixed(6)}
+                      </p>
+                      <p className="text-xs text-green-600 mt-1">
+                        <a 
+                          href={`https://www.google.com/maps?q=${form.watch("latitude")},${form.watch("longitude")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:no-underline"
+                        >
+                          Ver en Google Maps
+                        </a>
+                      </p>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -586,7 +717,22 @@ export default function WorkOrders() {
               
               <div className="text-sm text-gray-600">
                 <span className="font-medium">Ubicación:</span> {workOrder.address}, {workOrder.city}
+                {workOrder.zipCode && <span>, {workOrder.zipCode}</span>}
               </div>
+              
+              {workOrder.latitude && workOrder.longitude && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">GPS:</span> {Number(workOrder.latitude).toFixed(6)}, {Number(workOrder.longitude).toFixed(6)}
+                  <a 
+                    href={`https://www.google.com/maps?q=${workOrder.latitude},${workOrder.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-2 text-blue-600 hover:underline"
+                  >
+                    Ver mapa
+                  </a>
+                </div>
+              )}
               
               {workOrder.scheduledDate && (
                 <div className="flex items-center text-sm text-gray-600">

@@ -293,6 +293,75 @@ export const workOrderSteps = pgTable("work_order_steps", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Transformers table
+export const transformers = pgTable("transformers", {
+  id: serial("id").primaryKey(),
+  serialNumber: text("serial_number").unique().notNull(),
+  manufacturer: text("manufacturer"),
+  model: text("model"),
+  voltage: text("voltage"),
+  capacity: text("capacity"),
+  installationDate: text("installation_date"),
+  location: text("location"),
+  status: text("status").default("active"), // active, maintenance, decommissioned
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Procedure catalog table
+export const procedureCatalog = pgTable("procedure_catalog", {
+  id: serial("id").primaryKey(),
+  code: text("code").unique().notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: text("category"), // maintenance, repair, inspection, etc.
+  estimatedDuration: integer("estimated_duration"), // in minutes
+  requiredTools: text("required_tools").array(),
+  safetyRequirements: text("safety_requirements").array(),
+  steps: text("steps").array(),
+  knowledgeBase: text("knowledge_base"), // Rich text with procedures documentation
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Work order transformers (many-to-many relationship)
+export const workOrderTransformers = pgTable("work_order_transformers", {
+  id: serial("id").primaryKey(),
+  workOrderId: integer("work_order_id").references(() => workOrders.id).notNull(),
+  transformerId: integer("transformer_id").references(() => transformers.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Transformer procedures (procedures applied to specific transformers in work orders)
+export const transformerProcedures = pgTable("transformer_procedures", {
+  id: serial("id").primaryKey(),
+  workOrderId: integer("work_order_id").references(() => workOrders.id).notNull(),
+  transformerId: integer("transformer_id").references(() => transformers.id).notNull(),
+  procedureId: integer("procedure_id").references(() => procedureCatalog.id).notNull(),
+  status: text("status").default("pending"), // pending, in_progress, completed, cancelled
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  performedBy: integer("performed_by").references(() => users.id),
+  notes: text("notes"),
+  actualDuration: integer("actual_duration"), // in minutes
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Photos for transformer procedures
+export const transformerProcedurePhotos = pgTable("transformer_procedure_photos", {
+  id: serial("id").primaryKey(),
+  transformerProcedureId: integer("transformer_procedure_id").references(() => transformerProcedures.id).notNull(),
+  photoType: text("photo_type").notNull(), // before, during, after, documentation
+  filePath: text("file_path").notNull(),
+  fileName: text("file_name").notNull(),
+  description: text("description"),
+  takenAt: timestamp("taken_at").defaultNow(),
+  takenBy: integer("taken_by").references(() => users.id),
+  hasWatermark: boolean("has_watermark").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -377,6 +446,33 @@ export const insertWorkOrderStepSchema = createInsertSchema(workOrderSteps).omit
   createdAt: true,
 });
 
+export const insertTransformerSchema = createInsertSchema(transformers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProcedureCatalogSchema = createInsertSchema(procedureCatalog).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWorkOrderTransformerSchema = createInsertSchema(workOrderTransformers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTransformerProcedureSchema = createInsertSchema(transformerProcedures).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTransformerProcedurePhotoSchema = createInsertSchema(transformerProcedurePhotos).omit({
+  id: true,
+  createdAt: true,
+  takenAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -422,6 +518,21 @@ export type InsertWorkOrderPhoto = z.infer<typeof insertWorkOrderPhotoSchema>;
 
 export type WorkOrderStep = typeof workOrderSteps.$inferSelect;
 export type InsertWorkOrderStep = z.infer<typeof insertWorkOrderStepSchema>;
+
+export type Transformer = typeof transformers.$inferSelect;
+export type InsertTransformer = z.infer<typeof insertTransformerSchema>;
+
+export type ProcedureCatalog = typeof procedureCatalog.$inferSelect;
+export type InsertProcedureCatalog = z.infer<typeof insertProcedureCatalogSchema>;
+
+export type WorkOrderTransformer = typeof workOrderTransformers.$inferSelect;
+export type InsertWorkOrderTransformer = z.infer<typeof insertWorkOrderTransformerSchema>;
+
+export type TransformerProcedure = typeof transformerProcedures.$inferSelect;
+export type InsertTransformerProcedure = z.infer<typeof insertTransformerProcedureSchema>;
+
+export type TransformerProcedurePhoto = typeof transformerProcedurePhotos.$inferSelect;
+export type InsertTransformerProcedurePhoto = z.infer<typeof insertTransformerProcedurePhotoSchema>;
 
 // Define relations
 export const usersRelations = relations(users, ({ many }) => ({
