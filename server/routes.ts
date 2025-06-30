@@ -14,6 +14,14 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+
+// Extend session interface
+declare module 'express-session' {
+  interface SessionData {
+    userId: number;
+    userRole: string;
+  }
+}
 import { processWorkOrderPhoto } from "./utils/watermark";
 import fs from "fs/promises";
 
@@ -31,7 +39,7 @@ const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('he
 
 // Middleware para verificar autenticación
 function requireAuth(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
+  if (!(req.session as any)?.userId) {
     return res.status(401).json({ message: 'No autorizado' });
   }
   next();
@@ -108,8 +116,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Crear sesión
-      req.session.userId = user.id;
-      req.session.userRole = user.role;
+      (req.session as any).userId = user.id;
+      (req.session as any).userRole = user.role;
       
       res.json({ 
         user: { 
@@ -137,11 +145,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/auth/user", (req, res) => {
-    if (!req.session?.userId) {
+    if (!(req.session as any)?.userId) {
       return res.status(401).json({ message: "No autenticado" });
     }
     
-    storage.getUser(req.session.userId).then(user => {
+    storage.getUser((req.session as any).userId).then(user => {
       if (!user) {
         return res.status(404).json({ message: "Usuario no encontrado" });
       }
