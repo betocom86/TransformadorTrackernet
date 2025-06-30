@@ -90,7 +90,7 @@ export default function Sidebar() {
     queryKey: ['/api/dashboard/stats'],
   });
 
-  const personalAlerts = stats?.expiredDocs || 0;
+  const personalAlerts = (stats as any)?.expiredDocs || 0;
 
   return (
     <aside className="w-64 bg-white shadow-lg">
@@ -109,9 +109,9 @@ export default function Sidebar() {
               
               return (
                 <Link key={item.name} href={item.href}>
-                  <a
+                  <div
                     className={cn(
-                      "flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors",
+                      "flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer",
                       isActive && "bg-blue-50 border-r-2 border-primary text-primary"
                     )}
                   >
@@ -125,7 +125,7 @@ export default function Sidebar() {
                         {alertCount}
                       </Badge>
                     )}
-                  </a>
+                  </div>
                 </Link>
               );
             })}

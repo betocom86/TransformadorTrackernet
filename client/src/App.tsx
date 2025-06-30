@@ -8,6 +8,7 @@ import Dashboard from "@/pages/dashboard";
 import Personnel from "@/pages/personnel";
 import Projects from "@/pages/projects";
 import Documents from "@/pages/documents";
+import Certifications from "@/pages/certifications";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 
@@ -24,6 +25,7 @@ function Router() {
             <Route path="/personal" component={Personnel} />
             <Route path="/proyectos" component={Projects} />
             <Route path="/documentos" component={Documents} />
+            <Route path="/certificaciones" component={Certifications} />
             <Route component={NotFound} />
           </Switch>
         </main>

@@ -97,6 +97,417 @@ export class MemStorage implements IStorage {
     this.training = new Map();
     this.alerts = new Map();
     this.currentId = 1;
+    
+    // Initialize with sample data for demonstration
+    this.initializeSampleData();
+  }
+
+  private initializeSampleData() {
+    // Sample personnel for Mexican transformer maintenance company
+    const samplePersonnel = [
+      {
+        employeeId: "PRSCU001",
+        fullName: "Carlos Roberto Mendoza García",
+        position: "Técnico Senior",
+        department: "Mantenimiento",
+        phoneNumber: "+52 555 123 4567",
+        emergencyContact: "María Elena Mendoza (Esposa)",
+        emergencyPhone: "+52 555 987 6543",
+        address: "Av. Insurgentes Sur 1234, Col. Del Valle, CDMX 03100",
+        dateOfBirth: "1985-03-15",
+        hireDate: "2020-01-15",
+        status: "active",
+        notes: "Especialista en transformadores de alta tensión, certificación IEEE"
+      },
+      {
+        employeeId: "PRSCU002", 
+        fullName: "José Luis Hernández Ramírez",
+        position: "Técnico Junior",
+        department: "Mantenimiento",
+        phoneNumber: "+52 555 234 5678",
+        emergencyContact: "Ana Sofía Hernández (Madre)",
+        emergencyPhone: "+52 555 876 5432",
+        address: "Calle Morelos 567, Col. Centro, Guadalajara, JAL 44100",
+        dateOfBirth: "1990-07-22",
+        hireDate: "2022-06-01",
+        status: "active",
+        notes: "En entrenamiento para certificación de seguridad en EUA"
+      },
+      {
+        employeeId: "PRSCU003",
+        fullName: "Miguel Ángel Torres Vásquez",
+        position: "Supervisor",
+        department: "Operaciones",
+        phoneNumber: "+52 555 345 6789",
+        emergencyContact: "Carmen Torres (Esposa)",
+        emergencyPhone: "+52 555 765 4321",
+        address: "Blvd. Manuel Ávila Camacho 890, Col. Lomas, Monterrey, NL 64710",
+        dateOfBirth: "1980-11-08",
+        hireDate: "2018-03-10",
+        status: "active",
+        notes: "Líder de equipo con experiencia en proyectos internacionales"
+      },
+      {
+        employeeId: "PRSCU004",
+        fullName: "Roberto Carlos Jiménez López",
+        position: "Ingeniero",
+        department: "Ingeniería",
+        phoneNumber: "+52 555 456 7890",
+        emergencyContact: "Laura Jiménez (Hermana)",
+        emergencyPhone: "+52 555 654 3210",
+        address: "Av. Universidad 123, Col. Copilco, CDMX 04360",
+        dateOfBirth: "1987-05-30",
+        hireDate: "2019-09-20",
+        status: "active",
+        notes: "Ingeniero eléctrico especializado en sistemas de potencia"
+      }
+    ];
+
+    samplePersonnel.forEach(person => {
+      const id = this.currentId++;
+      const personnel: Personnel = {
+        id,
+        ...person,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01')
+      };
+      this.personnel.set(id, personnel);
+    });
+
+    // Sample projects in Texas
+    const sampleProjects = [
+      {
+        projectName: "Mantenimiento Subestación Houston North",
+        projectCode: "PRSCU-TX-2024-001",
+        clientName: "CenterPoint Energy",
+        location: "Houston",
+        state: "TX",
+        startDate: "2024-02-01",
+        endDate: "2024-02-15",
+        estimatedDuration: 14,
+        status: "active",
+        description: "Mantenimiento preventivo de transformadores de potencia en subestación de 138kV",
+        requiredPersonnel: 4,
+        priority: "high",
+        budget: 15000000, // $150,000 USD in cents
+        notes: "Proyecto crítico para infraestructura eléctrica de Houston"
+      },
+      {
+        projectName: "Instalación Transformador Dallas",
+        projectCode: "PRSCU-TX-2024-002", 
+        clientName: "Oncor Electric Delivery",
+        location: "Dallas",
+        state: "TX",
+        startDate: "2024-03-01",
+        endDate: "2024-03-10",
+        estimatedDuration: 10,
+        status: "planning",
+        description: "Instalación de nuevo transformador de distribución 25MVA",
+        requiredPersonnel: 3,
+        priority: "medium",
+        budget: 8500000, // $85,000 USD in cents
+        notes: "Requiere coordinación con autoridades locales de Dallas"
+      },
+      {
+        projectName: "Reparación Emergencia San Antonio",
+        projectCode: "PRSCU-TX-2024-003",
+        clientName: "CPS Energy",
+        location: "San Antonio", 
+        state: "TX",
+        startDate: "2024-01-15",
+        endDate: "2024-01-20",
+        estimatedDuration: 5,
+        status: "completed",
+        description: "Reparación de emergencia en transformador dañado por tormenta",
+        requiredPersonnel: 5,
+        priority: "urgent",
+        budget: 12000000, // $120,000 USD in cents
+        notes: "Trabajo completado exitosamente bajo condiciones de emergencia"
+      }
+    ];
+
+    sampleProjects.forEach(project => {
+      const id = this.currentId++;
+      const proj: Project = {
+        id,
+        ...project,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01')
+      };
+      this.projects.set(id, proj);
+    });
+
+    // Sample documents based on compliance requirements
+    const sampleDocuments = [
+      // Carlos Mendoza documents
+      {
+        personnelId: 1,
+        documentType: "passport",
+        documentNumber: "G12345678",
+        issueDate: "2019-05-15",
+        expirationDate: "2029-05-15",
+        issuingAuthority: "Secretaría de Relaciones Exteriores México",
+        status: "valid",
+        notes: "Pasaporte vigente para viajes a EUA"
+      },
+      {
+        personnelId: 1,
+        documentType: "visa",
+        documentNumber: "B1B2-2023-001",
+        issueDate: "2023-01-10",
+        expirationDate: "2025-01-10",
+        issuingAuthority: "US Embassy Mexico City",
+        status: "expiring_soon",
+        notes: "Visa de trabajo temporal, renovar pronto"
+      },
+      {
+        personnelId: 1,
+        documentType: "medical",
+        documentNumber: "MED-2024-001",
+        issueDate: "2024-01-05",
+        expirationDate: "2025-01-05",
+        issuingAuthority: "Instituto Mexicano del Seguro Social",
+        status: "valid",
+        notes: "Examen médico para trabajo en altura"
+      },
+      {
+        personnelId: 1,
+        documentType: "safety",
+        documentNumber: "OSHA-30HR-2023",
+        issueDate: "2023-06-15",
+        expirationDate: "2026-06-15",
+        issuingAuthority: "OSHA Training Institute",
+        status: "valid",
+        notes: "Certificación OSHA 30 horas para construcción"
+      },
+      // José Luis documents  
+      {
+        personnelId: 2,
+        documentType: "passport",
+        documentNumber: "G87654321",
+        issueDate: "2020-08-20",
+        expirationDate: "2030-08-20",
+        issuingAuthority: "Secretaría de Relaciones Exteriores México",
+        status: "valid",
+        notes: "Pasaporte nuevo, válido por 10 años"
+      },
+      {
+        personnelId: 2,
+        documentType: "visa",
+        documentNumber: "B1B2-2022-002",
+        issueDate: "2022-03-15",
+        expirationDate: "2024-03-15",
+        issuingAuthority: "US Consulate Guadalajara",
+        status: "expired",
+        notes: "URGENTE: Visa vencida, requiere renovación inmediata"
+      },
+      // Miguel Torres documents
+      {
+        personnelId: 3,
+        documentType: "passport",
+        documentNumber: "G11223344",
+        issueDate: "2018-12-01",
+        expirationDate: "2028-12-01",
+        issuingAuthority: "Secretaría de Relaciones Exteriores México",
+        status: "valid",
+        notes: "Pasaporte vigente"
+      },
+      {
+        personnelId: 3,
+        documentType: "certification",
+        documentNumber: "IEEE-STD-C57",
+        issueDate: "2023-09-10",
+        expirationDate: "2026-09-10",
+        issuingAuthority: "IEEE Power & Energy Society",
+        status: "valid",
+        notes: "Certificación en mantenimiento de transformadores"
+      }
+    ];
+
+    sampleDocuments.forEach(doc => {
+      const id = this.currentId++;
+      const document: Document = {
+        id,
+        ...doc,
+        filePath: null,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01')
+      };
+      this.documents.set(id, document);
+    });
+
+    // Sample project assignments
+    const sampleAssignments = [
+      {
+        projectId: 1, // Houston project
+        personnelId: 1, // Carlos
+        role: "lead",
+        assignedDate: "2024-02-01",
+        status: "on_site",
+        notes: "Líder técnico del proyecto"
+      },
+      {
+        projectId: 1, // Houston project  
+        personnelId: 3, // Miguel
+        role: "supervisor",
+        assignedDate: "2024-02-01",
+        status: "on_site",
+        notes: "Supervisor de operaciones"
+      },
+      {
+        projectId: 2, // Dallas project
+        personnelId: 4, // Roberto
+        role: "engineer",
+        assignedDate: "2024-03-01",
+        status: "assigned",
+        notes: "Ingeniero responsable del diseño"
+      }
+    ];
+
+    sampleAssignments.forEach(assignment => {
+      const id = this.currentId++;
+      const assign: ProjectAssignment = {
+        id,
+        ...assignment,
+        createdAt: new Date('2024-01-01')
+      };
+      this.projectAssignments.set(id, assign);
+    });
+
+    // Sample safety equipment
+    const sampleEquipment = [
+      {
+        personnelId: 1,
+        equipmentType: "helmet",
+        brand: "MSA",
+        model: "V-Gard",
+        serialNumber: "MSA001234",
+        purchaseDate: "2023-01-15",
+        expirationDate: "2028-01-15",
+        condition: "good",
+        lastInspection: "2024-01-01",
+        nextInspection: "2024-07-01",
+        status: "active",
+        notes: "Casco certificado para trabajo eléctrico"
+      },
+      {
+        personnelId: 1,
+        equipmentType: "boots",
+        brand: "Red Wing",
+        model: "Electrical Hazard",
+        serialNumber: "RW567890",
+        purchaseDate: "2023-06-01",
+        condition: "fair",
+        lastInspection: "2024-01-01",
+        nextInspection: "2024-04-01",
+        status: "active",
+        notes: "Botas dieléctricas para protección eléctrica"
+      }
+    ];
+
+    sampleEquipment.forEach(equipment => {
+      const id = this.currentId++;
+      const equip: SafetyEquipment = {
+        id,
+        ...equipment,
+        createdAt: new Date('2024-01-01')
+      };
+      this.safetyEquipment.set(id, equip);
+    });
+
+    // Sample training records
+    const sampleTraining = [
+      {
+        personnelId: 1,
+        trainingName: "OSHA 30-Hour Construction Safety",
+        trainingType: "safety",
+        provider: "OSHA Training Institute",
+        completionDate: "2023-06-15",
+        expirationDate: "2026-06-15",
+        certificateNumber: "OSHA-30-2023-001",
+        status: "active",
+        notes: "Certificación requerida para trabajo en EUA"
+      },
+      {
+        personnelId: 2,
+        trainingName: "Primeros Auxilios y RCP",
+        trainingType: "medical",
+        provider: "Cruz Roja Mexicana",
+        completionDate: "2023-08-20",
+        expirationDate: "2025-08-20",
+        certificateNumber: "CRM-FA-2023-045",
+        status: "active",
+        notes: "Certificación en primeros auxilios"
+      },
+      {
+        personnelId: 3,
+        trainingName: "Mantenimiento de Transformadores IEEE C57",
+        trainingType: "technical",
+        provider: "IEEE Power & Energy Society",
+        completionDate: "2023-09-10",
+        expirationDate: "2026-09-10",
+        certificateNumber: "IEEE-C57-2023-078",
+        status: "active",
+        notes: "Certificación técnica especializada"
+      }
+    ];
+
+    sampleTraining.forEach(training => {
+      const id = this.currentId++;
+      const train: Training = {
+        id,
+        ...training,
+        filePath: null,
+        createdAt: new Date('2024-01-01')
+      };
+      this.training.set(id, train);
+    });
+
+    // Sample alerts based on document expirations
+    const sampleAlerts = [
+      {
+        personnelId: 2,
+        alertType: "document_expiring",
+        message: "URGENTE: Visa de José Luis Hernández vencida desde marzo 2024",
+        severity: "critical",
+        relatedId: 6, // Visa document
+        relatedType: "document",
+        dueDate: "2024-03-15",
+        status: "active"
+      },
+      {
+        personnelId: 1,
+        alertType: "document_expiring",
+        message: "Visa de Carlos Mendoza vence en 2 meses (enero 2025)",
+        severity: "high",
+        relatedId: 2, // Visa document
+        relatedType: "document",
+        dueDate: "2025-01-10",
+        status: "active"
+      },
+      {
+        personnelId: 1,
+        alertType: "equipment_inspection",
+        message: "Inspección de botas de seguridad vence en abril 2024",
+        severity: "medium",
+        relatedId: 2, // Safety equipment
+        relatedType: "equipment",
+        dueDate: "2024-04-01",
+        status: "active"
+      }
+    ];
+
+    sampleAlerts.forEach(alert => {
+      const id = this.currentId++;
+      const alertObj: Alert = {
+        id,
+        ...alert,
+        createdAt: new Date('2024-01-01'),
+        acknowledgedAt: null,
+        resolvedAt: null
+      };
+      this.alerts.set(id, alertObj);
+    });
   }
 
   // Users

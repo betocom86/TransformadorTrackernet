@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,34 +19,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, Search, Eye, Download, FileText, AlertTriangle, Clock } from "lucide-react";
+import { Upload, Search, Award, AlertTriangle, Clock } from "lucide-react";
 import { cn, formatDate, getStatusColor, getStatusText, getDaysUntilExpiration } from "@/lib/utils";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import type { Document, Personnel } from "@shared/schema";
+import type { Training, Personnel } from "@shared/schema";
 
-export default function Documents() {
+export default function Certifications() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPersonnel, setSelectedPersonnel] = useState<string>("");
-  const [documentTypeFilter, setDocumentTypeFilter] = useState<string>("");
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+  const [trainingTypeFilter, setTrainingTypeFilter] = useState<string>("");
 
-  const { data: documents = [], isLoading: documentsLoading } = useQuery({
-    queryKey: ['/api/documents'],
+  const { data: training = [], isLoading: trainingLoading } = useQuery({
+    queryKey: ['/api/training/1'], // This would need to be updated to get all training
   });
 
   const { data: personnel = [], isLoading: personnelLoading } = useQuery({
     queryKey: ['/api/personnel'],
-  });
-
-  const filteredDocuments = (documents as Document[]).filter((doc: Document) => {
-    const matchesSearch = doc.documentNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doc.issuingAuthority?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPersonnel = !selectedPersonnel || selectedPersonnel === "all" || doc.personnelId.toString() === selectedPersonnel;
-    const matchesType = !documentTypeFilter || documentTypeFilter === "all" || doc.documentType === documentTypeFilter;
-    
-    return matchesSearch && matchesPersonnel && matchesType;
   });
 
   const getPersonnelName = (personnelId: number) => {
@@ -54,12 +41,12 @@ export default function Documents() {
     return person?.fullName || `ID: ${personnelId}`;
   };
 
-  const getDocumentStatusInfo = (doc: Document) => {
-    if (!doc.expirationDate) {
+  const getTrainingStatusInfo = (train: Training) => {
+    if (!train.expirationDate) {
       return { status: 'valid', text: 'Sin vencimiento', color: 'bg-gray-100 text-gray-800' };
     }
 
-    const daysUntil = getDaysUntilExpiration(doc.expirationDate);
+    const daysUntil = getDaysUntilExpiration(train.expirationDate);
     
     if (daysUntil < 0) {
       return { status: 'expired', text: 'Vencido', color: 'bg-red-100 text-red-800' };
@@ -70,16 +57,14 @@ export default function Documents() {
     }
   };
 
-  const documentTypes = [
-    { value: 'passport', label: 'Pasaporte' },
-    { value: 'visa', label: 'Visa' },
-    { value: 'certification', label: 'Certificación' },
-    { value: 'medical', label: 'Médico' },
-    { value: 'insurance', label: 'Seguro' },
+  const trainingTypes = [
     { value: 'safety', label: 'Seguridad' },
+    { value: 'medical', label: 'Médico' },
+    { value: 'technical', label: 'Técnico' },
+    { value: 'compliance', label: 'Cumplimiento' },
   ];
 
-  if (documentsLoading || personnelLoading) {
+  if (trainingLoading || personnelLoading) {
     return (
       <div className="p-6">
         <div className="animate-pulse">
@@ -90,18 +75,76 @@ export default function Documents() {
     );
   }
 
-  const expiredDocs = (documents as Document[]).filter((doc: Document) => 
-    getDaysUntilExpiration(doc.expirationDate) < 0
-  ).length;
+  // Mock data for demonstration since API endpoint needs to be updated
+  const mockTraining = [
+    {
+      id: 1,
+      personnelId: 1,
+      trainingName: "OSHA 30-Hour Construction Safety",
+      trainingType: "safety",
+      provider: "OSHA Training Institute",
+      completionDate: "2023-06-15",
+      expirationDate: "2026-06-15",
+      certificateNumber: "OSHA-30-2023-001",
+      status: "active",
+      notes: "Certificación requerida para trabajo en EUA"
+    },
+    {
+      id: 2,
+      personnelId: 2,
+      trainingName: "Primeros Auxilios y RCP",
+      trainingType: "medical",
+      provider: "Cruz Roja Mexicana",
+      completionDate: "2023-08-20",
+      expirationDate: "2025-08-20",
+      certificateNumber: "CRM-FA-2023-045",
+      status: "active",
+      notes: "Certificación en primeros auxilios"
+    },
+    {
+      id: 3,
+      personnelId: 3,
+      trainingName: "Mantenimiento de Transformadores IEEE C57",
+      trainingType: "technical",
+      provider: "IEEE Power & Energy Society",
+      completionDate: "2023-09-10",
+      expirationDate: "2026-09-10",
+      certificateNumber: "IEEE-C57-2023-078",
+      status: "active",
+      notes: "Certificación técnica especializada"
+    },
+    {
+      id: 4,
+      personnelId: 2,
+      trainingName: "Certificación NFPA 70E",
+      trainingType: "safety",
+      provider: "NFPA International",
+      completionDate: "2022-03-15",
+      expirationDate: "2024-03-15",
+      certificateNumber: "NFPA-70E-2022-089",
+      status: "expired",
+      notes: "URGENTE: Certificación de seguridad eléctrica vencida"
+    }
+  ];
 
-  const expiringSoonDocs = (documents as Document[]).filter((doc: Document) => {
-    const days = getDaysUntilExpiration(doc.expirationDate);
+  const filteredTraining = mockTraining.filter((train) => {
+    const matchesSearch = train.trainingName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         train.certificateNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesPersonnel = !selectedPersonnel || selectedPersonnel === "all" || train.personnelId.toString() === selectedPersonnel;
+    const matchesType = !trainingTypeFilter || trainingTypeFilter === "all" || train.trainingType === trainingTypeFilter;
+    
+    return matchesSearch && matchesPersonnel && matchesType;
+  });
+
+  const activeTraining = mockTraining.filter(t => t.status === 'active').length;
+  const expiredTraining = mockTraining.filter(t => {
+    const days = getDaysUntilExpiration(t.expirationDate);
+    return days < 0;
+  }).length;
+  const expiringSoonTraining = mockTraining.filter(t => {
+    const days = getDaysUntilExpiration(t.expirationDate);
     return days >= 0 && days <= 30;
   }).length;
-
-  const validDocs = (documents as Document[]).filter((doc: Document) => 
-    getDaysUntilExpiration(doc.expirationDate) > 30
-  ).length;
 
   return (
     <div className="p-6">
@@ -109,15 +152,15 @@ export default function Documents() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">
-            Gestión de Documentos
+            Certificaciones y Entrenamientos
           </h2>
           <p className="text-gray-600">
-            Administra todos los documentos del personal
+            Gestiona las certificaciones y entrenamientos del personal
           </p>
         </div>
         <Button className="bg-primary hover:bg-primary/90">
           <Upload className="mr-2 h-4 w-4" />
-          Subir Documento
+          Registrar Certificación
         </Button>
       </div>
 
@@ -128,7 +171,7 @@ export default function Documents() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Buscar documentos..."
+                placeholder="Buscar certificaciones..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -149,13 +192,13 @@ export default function Documents() {
               </SelectContent>
             </Select>
 
-            <Select value={documentTypeFilter} onValueChange={setDocumentTypeFilter}>
+            <Select value={trainingTypeFilter} onValueChange={setTrainingTypeFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="Tipo de documento" />
+                <SelectValue placeholder="Tipo de certificación" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los tipos</SelectItem>
-                {documentTypes.map((type) => (
+                {trainingTypes.map((type) => (
                   <SelectItem key={type.value} value={type.value}>
                     {type.label}
                   </SelectItem>
@@ -170,16 +213,16 @@ export default function Documents() {
         </CardContent>
       </Card>
 
-      {/* Document Stats */}
+      {/* Training Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Documentos</p>
-                <p className="text-2xl font-bold">{(documents as Document[]).length}</p>
+                <p className="text-sm text-gray-600">Total Certificaciones</p>
+                <p className="text-2xl font-bold">{mockTraining.length}</p>
               </div>
-              <FileText className="h-8 w-8 text-blue-500" />
+              <Award className="h-8 w-8 text-blue-500" />
             </div>
           </CardContent>
         </Card>
@@ -189,10 +232,10 @@ export default function Documents() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Vigentes</p>
-                <p className="text-2xl font-bold text-green-600">{validDocs}</p>
+                <p className="text-2xl font-bold text-green-600">{activeTraining}</p>
               </div>
               <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                <FileText className="h-5 w-5 text-green-600" />
+                <Award className="h-5 w-5 text-green-600" />
               </div>
             </div>
           </CardContent>
@@ -203,7 +246,7 @@ export default function Documents() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Por Vencer</p>
-                <p className="text-2xl font-bold text-yellow-600">{expiringSoonDocs}</p>
+                <p className="text-2xl font-bold text-yellow-600">{expiringSoonTraining}</p>
               </div>
               <Clock className="h-8 w-8 text-yellow-500" />
             </div>
@@ -214,8 +257,8 @@ export default function Documents() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Vencidos</p>
-                <p className="text-2xl font-bold text-red-600">{expiredDocs}</p>
+                <p className="text-sm text-gray-600">Vencidas</p>
+                <p className="text-2xl font-bold text-red-600">{expiredTraining}</p>
               </div>
               <AlertTriangle className="h-8 w-8 text-red-500" />
             </div>
@@ -223,10 +266,10 @@ export default function Documents() {
         </Card>
       </div>
 
-      {/* Documents Table */}
+      {/* Training Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Documentos</CardTitle>
+          <CardTitle>Lista de Certificaciones</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -234,72 +277,64 @@ export default function Documents() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Personal</TableHead>
-                  <TableHead>Tipo de Documento</TableHead>
-                  <TableHead>Número</TableHead>
-                  <TableHead>Emisor</TableHead>
-                  <TableHead>Fecha de Emisión</TableHead>
-                  <TableHead>Vencimiento</TableHead>
+                  <TableHead>Certificación</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Proveedor</TableHead>
+                  <TableHead>Número de Certificado</TableHead>
+                  <TableHead>Fecha de Vencimiento</TableHead>
                   <TableHead>Estado</TableHead>
-                  <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDocuments.length === 0 ? (
+                {filteredTraining.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       <div className="flex flex-col items-center">
-                        <FileText className="h-12 w-12 text-gray-400 mb-2" />
+                        <Award className="h-12 w-12 text-gray-400 mb-2" />
                         <p className="text-gray-500">
-                          {searchTerm || selectedPersonnel || documentTypeFilter
-                            ? "No se encontraron documentos con los filtros aplicados"
-                            : "No hay documentos registrados"}
+                          {searchTerm || selectedPersonnel || trainingTypeFilter
+                            ? "No se encontraron certificaciones con los filtros aplicados"
+                            : "No hay certificaciones registradas"}
                         </p>
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredDocuments.map((document: Document) => {
-                    const statusInfo = getDocumentStatusInfo(document);
-                    const documentTypeLabel = documentTypes.find(t => t.value === document.documentType)?.label || document.documentType;
+                  filteredTraining.map((train) => {
+                    const statusInfo = getTrainingStatusInfo(train as Training);
+                    const trainingTypeLabel = trainingTypes.find(t => t.value === train.trainingType)?.label || train.trainingType;
                     
                     return (
-                      <TableRow key={document.id}>
+                      <TableRow key={train.id}>
                         <TableCell>
                           <div className="font-medium">
-                            {getPersonnelName(document.personnelId)}
+                            {getPersonnelName(train.personnelId)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{train.trainingName}</div>
+                            <div className="text-sm text-gray-500">
+                              Completado: {formatDate(train.completionDate)}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">
-                            {documentTypeLabel}
+                            {trainingTypeLabel}
                           </Badge>
                         </TableCell>
+                        <TableCell>{train.provider}</TableCell>
                         <TableCell className="font-mono">
-                          {document.documentNumber || "N/A"}
+                          {train.certificateNumber}
                         </TableCell>
-                        <TableCell>{document.issuingAuthority || "N/A"}</TableCell>
-                        <TableCell>{formatDate(document.issueDate)}</TableCell>
                         <TableCell>
-                          {document.expirationDate ? formatDate(document.expirationDate) : "Sin vencimiento"}
+                          {train.expirationDate ? formatDate(train.expirationDate) : "Sin vencimiento"}
                         </TableCell>
                         <TableCell>
                           <Badge className={statusInfo.color} variant="secondary">
                             {statusInfo.text}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            {document.filePath && (
-                              <>
-                                <Button variant="ghost" size="sm">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="sm">
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
                         </TableCell>
                       </TableRow>
                     );
