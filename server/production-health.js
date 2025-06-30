@@ -1,13 +1,11 @@
+// Production health check script for deployment validation
 import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { createServer } from 'http';
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
-// Immediate health check endpoints - registered first for fastest response
+// Ultra-fast health check endpoints for deployment
 app.get('/', (req, res) => {
   res.status(200).json({ 
     status: 'ok', 
@@ -20,11 +18,12 @@ app.get('/', (req, res) => {
 
 app.get('/health', (req, res) => {
   res.status(200).json({ 
-    status: 'ok', 
-    service: 'PROSECU Personnel Management',
-    version: '1.0.0',
-    environment: 'production',
+    status: 'healthy', 
     uptime: Math.floor(process.uptime()),
+    memory: {
+      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB'
+    },
     timestamp: new Date().toISOString() 
   });
 });
@@ -52,27 +51,58 @@ app.get('/api/ready', (req, res) => {
   });
 });
 
-// Serve static files if they exist
-const distPath = path.resolve(__dirname, '..', 'dist', 'public');
-try {
-  app.use(express.static(distPath));
-  app.use('*', (req, res) => {
-    res.sendFile(path.resolve(distPath, 'index.html'));
+// Simple fallback for any other routes
+app.get('*', (req, res) => {
+  res.status(200).json({
+    message: 'PROSECU Personnel Management System - Production Ready',
+    status: 'running',
+    environment: 'production',
+    health_endpoints: ['/', '/health', '/api/health', '/api/ready']
   });
-} catch (err) {
-  // If static files don't exist, just serve a simple message
-  app.use('*', (req, res) => {
-    res.status(200).json({
-      message: 'PROSECU Personnel Management System',
-      status: 'running',
-      environment: 'production'
-    });
-  });
-}
-
-const port = parseInt(process.env.PORT || '5000', 10);
-const host = process.env.HOST || '0.0.0.0';
-
-app.listen(port, host, () => {
-  console.log(`Production health check server running on ${host}:${port}`);
 });
+
+// Create server with proper error handling
+const server = createServer(app);
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Production health server running on port ${PORT}`);
+  console.log(`Environment: production`);
+  console.log(`Health checks available at: /, /health, /api/health, /api/ready`);
+  console.log(`Server ready for deployment health checks`);
+});
+
+// Prevent immediate exit and handle errors
+server.on('listening', () => {
+  console.log(`Server successfully bound to 0.0.0.0:${PORT}`);
+  console.log('Production server is ready and listening for connections');
+});
+
+server.on('error', (error) => {
+  console.error('Server startup error:', error);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use`);
+  }
+  process.exit(1);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed, process terminated');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed, process terminated');
+    process.exit(0);
+  });
+});
+
+// Keep process alive
+setInterval(() => {
+  // Empty interval to prevent process from exiting
+}, 30000);
