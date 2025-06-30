@@ -46,8 +46,18 @@ function requireAuth(req: any, res: any, next: any) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Health check endpoints - must be registered before other middleware
+  // Primary health check endpoints - MUST be first for fastest response
   // These respond immediately without database operations for deployment health checks
+  app.get('/health', (req, res) => {
+    res.status(200).json({ 
+      status: 'ok', 
+      service: 'PROSECU Personnel Management',
+      version: '1.0.0',
+      environment: process.env.NODE_ENV || 'development',
+      timestamp: new Date().toISOString() 
+    });
+  });
+
   app.get('/api/health', (req, res) => {
     res.status(200).json({ 
       status: 'healthy', 
@@ -72,7 +82,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Root endpoint for deployment health checks (production only)
+  // Root endpoint for deployment health checks (production only to avoid Vite conflicts)
   if (process.env.NODE_ENV === 'production') {
     app.get('/', (req, res) => {
       res.status(200).json({ 

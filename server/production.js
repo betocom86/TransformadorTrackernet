@@ -3,12 +3,59 @@ import express from 'express';
 import session from 'express-session';
 import connectPg from 'connect-pg-simple';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
+
+// CRITICAL: Health check endpoints MUST be first for deployment health checks
+// These respond immediately without database operations or authentication
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    service: 'PROSECU Personnel Management',
+    version: '1.0.0',
+    environment: 'production',
+    timestamp: new Date().toISOString() 
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    service: 'PROSECU Personnel Management',
+    version: '1.0.0',
+    environment: 'production',
+    uptime: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString() 
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy', 
+    uptime: Math.floor(process.uptime()),
+    memory: {
+      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB'
+    },
+    timestamp: new Date().toISOString() 
+  });
+});
+
+app.get('/api/ready', (req, res) => {
+  res.status(200).json({ 
+    status: 'ready',
+    service: 'PROSECU Personnel Management',
+    version: '1.0.0',
+    environment: 'production',
+    pid: process.pid,
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Middleware
 app.use(express.json());
@@ -197,13 +244,29 @@ app.get('/api/procedures', requireAuth, (req, res) => {
   ]);
 });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, '../dist/public')));
+// Serve static files if they exist
+const distPath = path.join(__dirname, '../dist/public');
+const indexPath = path.join(distPath, 'index.html');
 
-// Catch all handler for SPA
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/public/index.html'));
-});
+// Check if built files exist
+if (fs.existsSync(distPath) && fs.existsSync(indexPath)) {
+  app.use(express.static(distPath));
+  
+  // Catch all handler for SPA
+  app.get('*', (req, res) => {
+    res.sendFile(indexPath);
+  });
+} else {
+  // Fallback when static files don't exist - serve basic info
+  app.get('*', (req, res) => {
+    res.status(200).json({
+      message: 'PROSECU Personnel Management System',
+      status: 'running',
+      environment: 'production',
+      note: 'Frontend build not found - API endpoints available'
+    });
+  });
+}
 
 // Error handling
 app.use((err, req, res, next) => {
