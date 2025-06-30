@@ -68,10 +68,12 @@ app.use((req, res, next) => {
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
   const host = process.env.HOST || "0.0.0.0";
+  const environment = process.env.NODE_ENV || "development";
   
     server.listen(port, host, () => {
       serverReady = true;
       log(`serving on ${host}:${port}`);
+      log(`Environment: ${environment}`);
       log('Server is ready for health checks');
       
       // Initialize database with seed data after server is running (non-blocking)

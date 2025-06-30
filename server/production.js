@@ -278,7 +278,9 @@ app.use((err, req, res, next) => {
 const server = createServer(app);
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Production server running on port ${PORT}`);
-  console.log('Environment:', process.env.NODE_ENV || 'production');
+  console.log(`Environment: ${process.env.NODE_ENV || 'production'}`);
+  console.log(`Health checks available at: /, /health, /api/health, /api/ready`);
+  console.log(`Server ready for deployment health checks`);
 });
 
 // Graceful shutdown
