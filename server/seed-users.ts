@@ -50,5 +50,7 @@ export async function seedUsers() {
     
   } catch (error) {
     console.error("Error creating test users:", error);
+    // Continue despite user creation errors to prevent deployment failure
+    console.log("Continuing despite user creation error...");
   }
 }
