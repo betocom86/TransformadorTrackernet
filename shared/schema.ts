@@ -8,9 +8,24 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  role: text("role").notNull().default("crew"), // manager, crew
+  role: text("role").notNull().default("crew"), // admin, manager, crew, viewer
   fullName: text("full_name").notNull(),
   email: text("email"),
+  phoneNumber: text("phone_number"),
+  department: text("department"),
+  position: text("position"),
+  isActive: boolean("is_active").default(true),
+  lastLoginAt: timestamp("last_login_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User sessions for authentication management
+export const userSessions = pgTable("user_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  sessionToken: text("session_token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -178,9 +193,17 @@ export const insertAlertSchema = createInsertSchema(alerts).omit({
   resolvedAt: true,
 });
 
+export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
 
 export type Personnel = typeof personnel.$inferSelect;
 export type InsertPersonnel = z.infer<typeof insertPersonnelSchema>;
@@ -206,6 +229,14 @@ export type InsertAlert = z.infer<typeof insertAlertSchema>;
 // Define relations
 export const usersRelations = relations(users, ({ many }) => ({
   personnel: many(personnel),
+  sessions: many(userSessions),
+}));
+
+export const userSessionsRelations = relations(userSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [userSessions.userId],
+    references: [users.id],
+  }),
 }));
 
 export const personnelRelations = relations(personnel, ({ many }) => ({

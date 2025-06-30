@@ -1,5 +1,6 @@
 import type { 
-  User, InsertUser, 
+  User, InsertUser,
+  UserSession, InsertUserSession,
   Personnel, InsertPersonnel,
   Document, InsertDocument,
   Project, InsertProject,
@@ -9,14 +10,28 @@ import type {
   Alert, InsertAlert
 } from "@shared/schema";
 import { db } from "./db";
-import { users, personnel, documents, projects, projectAssignments, safetyEquipment, training, alerts } from "@shared/schema";
+import { users, userSessions, personnel, documents, projects, projectAssignments, safetyEquipment, training, alerts } from "@shared/schema";
 import { eq, and, lte, gte, sql } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 export interface IStorage {
-  // Users
+  // Users and Authentication
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
+  getAllUsers(): Promise<User[]>;
+  validateUserCredentials(username: string, password: string): Promise<User | null>;
+  updateLastLogin(userId: number): Promise<void>;
+  
+  // User Sessions
+  createSession(session: InsertUserSession): Promise<UserSession>;
+  getSessionByToken(token: string): Promise<UserSession | undefined>;
+  deleteSession(token: string): Promise<boolean>;
+  deleteUserSessions(userId: number): Promise<boolean>;
 
   // Personnel
   getAllPersonnel(): Promise<Personnel[]>;
