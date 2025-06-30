@@ -1,32 +1,33 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, numeric, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, numeric, real, varchar, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 import { z } from "zod";
 
-// Users table for authentication
+// Session storage table for Replit Auth (required)
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// Users table for Replit Auth (required)
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  id: varchar("id").primaryKey().notNull(), // Replit user ID (string)
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
   role: text("role").notNull().default("crew"), // admin, manager, crew, viewer
-  fullName: text("full_name").notNull(),
-  email: text("email"),
-  phoneNumber: text("phone_number"),
   department: text("department"),
   position: text("position"),
   isActive: boolean("is_active").default(true),
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// User sessions for authentication management
-export const userSessions = pgTable("user_sessions", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }),
-  sessionToken: text("session_token").notNull().unique(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Personnel table - main employee records
@@ -408,10 +409,7 @@ export const insertAlertSchema = createInsertSchema(alerts).omit({
   resolvedAt: true,
 });
 
-export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
-  id: true,
-  createdAt: true,
-});
+// User session schema removed - using Replit Auth session storage
 
 export const insertCrewSchema = createInsertSchema(crews).omit({
   id: true,
@@ -473,12 +471,9 @@ export const insertTransformerProcedurePhotoSchema = createInsertSchema(transfor
   takenAt: true,
 });
 
-// Types
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
+// Types (User types moved to bottom to avoid duplicate with Replit Auth types)
 
-export type UserSession = typeof userSessions.$inferSelect;
-export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
+// UserSession types removed - using Replit Auth session management
 
 export type Personnel = typeof personnel.$inferSelect;
 export type InsertPersonnel = z.infer<typeof insertPersonnelSchema>;
@@ -537,14 +532,6 @@ export type InsertTransformerProcedurePhoto = z.infer<typeof insertTransformerPr
 // Define relations
 export const usersRelations = relations(users, ({ many }) => ({
   personnel: many(personnel),
-  sessions: many(userSessions),
-}));
-
-export const userSessionsRelations = relations(userSessions, ({ one }) => ({
-  user: one(users, {
-    fields: [userSessions.userId],
-    references: [users.id],
-  }),
 }));
 
 export const personnelRelations = relations(personnel, ({ many }) => ({
@@ -597,3 +584,7 @@ export const alertsRelations = relations(alerts, ({ one }) => ({
     references: [personnel.id],
   }),
 }));
+
+// Replit Auth types (moved from bottom to avoid duplicate)
+export type User = typeof users.$inferSelect;
+export type UpsertUser = typeof users.$inferInsert;

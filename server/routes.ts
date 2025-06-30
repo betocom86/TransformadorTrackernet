@@ -6,22 +6,11 @@ import { storage } from "./storage";
 import { 
   insertPersonnelSchema, insertDocumentSchema, insertProjectSchema, 
   insertProjectAssignmentSchema, insertSafetyEquipmentSchema, 
-  insertTrainingSchema, insertAlertSchema, insertUserSchema,
+  insertTrainingSchema, insertAlertSchema,
   insertCrewSchema, insertCrewMemberSchema, insertWorkOrderSchema,
   insertRouteSchema, insertWorkOrderPhotoSchema, insertWorkOrderStepSchema
 } from "@shared/schema";
-import session from "express-session";
-import connectPg from "connect-pg-simple";
-import jwt from "jsonwebtoken";
-import crypto from "crypto";
-
-// Extend session interface
-declare module 'express-session' {
-  interface SessionData {
-    userId: number;
-    userRole: string;
-  }
-}
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { processWorkOrderPhoto } from "./utils/watermark";
 import fs from "fs/promises";
 
@@ -32,18 +21,6 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
 });
-
-// Session configuration
-const PgSession = connectPg(session);
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
-
-// Middleware para verificar autenticación
-function requireAuth(req: any, res: any, next: any) {
-  if (!(req.session as any)?.userId) {
-    return res.status(401).json({ message: 'No autorizado' });
-  }
-  next();
-}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Primary health check endpoints - MUST be first for fastest response
@@ -96,85 +73,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
-  // Configurar sesiones
-  app.use(session({
-    store: new PgSession({
-      conString: process.env.DATABASE_URL,
-      createTableIfMissing: true,
-    }),
-    secret: JWT_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: false, // Cambiar a true en producción con HTTPS
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 horas
-    }
-  }));
+  // Auth middleware
+  await setupAuth(app);
 
-  // Authentication routes
-  app.post("/api/auth/login", async (req, res) => {
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const { username, password } = req.body;
-      
-      if (!username || !password) {
-        return res.status(400).json({ message: "Usuario y contraseña requeridos" });
-      }
-
-      const user = await storage.validateUserCredentials(username, password);
-      if (!user) {
-        return res.status(401).json({ message: "Credenciales inválidas" });
-      }
-
-      // Crear sesión
-      (req.session as any).userId = user.id;
-      (req.session as any).userRole = user.role;
-      
-      res.json({ 
-        user: { 
-          id: user.id, 
-          username: user.username, 
-          email: user.email, 
-          role: user.role,
-          fullName: user.fullName 
-        } 
-      });
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
     } catch (error) {
-      console.error("Login error:", error);
-      res.status(500).json({ message: "Error interno del servidor" });
-    }
-  });
-
-  app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Error al cerrar sesión" });
-      }
-      res.clearCookie('connect.sid');
-      res.json({ message: "Sesión cerrada exitosamente" });
-    });
-  });
-
-  app.get("/api/auth/user", (req, res) => {
-    if (!(req.session as any)?.userId) {
-      return res.status(401).json({ message: "No autenticado" });
-    }
-    
-    storage.getUser((req.session as any).userId).then(user => {
-      if (!user) {
-        return res.status(404).json({ message: "Usuario no encontrado" });
-      }
-      res.json({ 
-        id: user.id, 
-        username: user.username, 
-        email: user.email, 
-        role: user.role,
-        fullName: user.fullName 
-      });
-    }).catch(error => {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Error interno del servidor" });
-    });
+    }
+  });
+
+  // Protected route example  
+  app.get("/api/protected", isAuthenticated, async (req, res) => {
+    const userId = req.user?.claims?.sub;
+    // Do something with the user id.
   });
 
   app.post("/api/auth/register", async (req, res) => {

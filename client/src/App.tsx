@@ -16,55 +16,36 @@ import WorkOrders from "@/pages/work-orders";
 import Routes from "@/pages/routes";
 import Procedures from "@/pages/procedures";
 import Transformers from "@/pages/transformers";
-import Login from "@/pages/login";
+import Landing from "@/pages/landing";
+import Home from "@/pages/home";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <Switch>
-        <Route path="/login" component={Login} />
-        <Route component={Login} />
-      </Switch>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="flex h-screen pt-16">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">
-          <Switch>
-            <Route path="/" component={Dashboard} />
-            <Route path="/dashboard" component={Dashboard} />
-            <Route path="/personal" component={Personnel} />
-            <Route path="/proyectos" component={Projects} />
-            <Route path="/documentos" component={Documents} />
-            <Route path="/certificaciones" component={Certifications} />
-            <Route path="/cumplimiento" component={Compliance} />
-            <Route path="/cuadrillas" component={Crews} />
-            <Route path="/ordenes-trabajo" component={WorkOrders} />
-            <Route path="/rutas" component={Routes} />
-            <Route path="/procedimientos" component={Procedures} />
-            <Route path="/transformadores" component={Transformers} />
-            <Route path="/login" component={Login} />
-            <Route component={NotFound} />
-          </Switch>
-        </main>
-      </div>
-    </div>
+    <Switch>
+      {isLoading || !isAuthenticated ? (
+        <Route path="/" component={Landing} />
+      ) : (
+        <>
+          <Route path="/" component={Home} />
+          <Route path="/dashboard" component={Dashboard} />
+          <Route path="/personal" component={Personnel} />
+          <Route path="/proyectos" component={Projects} />
+          <Route path="/documentos" component={Documents} />
+          <Route path="/certificaciones" component={Certifications} />
+          <Route path="/cumplimiento" component={Compliance} />
+          <Route path="/cuadrillas" component={Crews} />
+          <Route path="/ordenes-trabajo" component={WorkOrders} />
+          <Route path="/rutas" component={Routes} />
+          <Route path="/procedimientos" component={Procedures} />
+          <Route path="/transformadores" component={Transformers} />
+        </>
+      )}
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 
