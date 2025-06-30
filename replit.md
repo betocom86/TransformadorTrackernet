@@ -108,7 +108,8 @@ PROSECU is a comprehensive personnel management system designed for construction
 - File upload directory configuration
 
 ## Changelog
-- June 30, 2025. Initial setup
+- June 30, 2025: Sistema completo implementado con PostgreSQL, gestión de usuarios, cumplimiento de 45 requisitos, y branding GC Electric aplicado
+- June 30, 2025: Initial setup
 
 ## User Preferences
 

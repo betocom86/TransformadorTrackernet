@@ -103,12 +103,80 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
+    const hashedPassword = await bcrypt.hash(insertUser.password, 10);
     const [user] = await db
       .insert(users)
-      .values(insertUser)
+      .values({ ...insertUser, password: hashedPassword })
       .returning();
     return user;
+  }
+
+  async updateUser(id: number, update: Partial<InsertUser>): Promise<User | undefined> {
+    if (update.password) {
+      update.password = await bcrypt.hash(update.password, 10);
+    }
+    const [user] = await db
+      .update(users)
+      .set({ ...update, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async validateUserCredentials(username: string, password: string): Promise<User | null> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    if (!user || !user.isActive) return null;
+    
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) return null;
+    
+    await this.updateLastLogin(user.id);
+    return user;
+  }
+
+  async updateLastLogin(userId: number): Promise<void> {
+    await db
+      .update(users)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async createSession(session: any): Promise<any> {
+    const [newSession] = await db
+      .insert(userSessions)
+      .values(session)
+      .returning();
+    return newSession;
+  }
+
+  async getSessionByToken(token: string): Promise<any> {
+    const [session] = await db.select().from(userSessions).where(eq(userSessions.sessionToken, token));
+    return session || undefined;
+  }
+
+  async deleteSession(token: string): Promise<boolean> {
+    const result = await db.delete(userSessions).where(eq(userSessions.sessionToken, token));
+    return result.rowCount > 0;
+  }
+
+  async deleteUserSessions(userId: number): Promise<boolean> {
+    const result = await db.delete(userSessions).where(eq(userSessions.userId, userId));
+    return result.rowCount > 0;
   }
 
   async getAllPersonnel(): Promise<Personnel[]> {
