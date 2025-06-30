@@ -7,10 +7,16 @@ import type {
   ProjectAssignment, InsertProjectAssignment,
   SafetyEquipment, InsertSafetyEquipment,
   Training, InsertTraining,
-  Alert, InsertAlert
+  Alert, InsertAlert,
+  Crew, InsertCrew,
+  CrewMember, InsertCrewMember,
+  WorkOrder, InsertWorkOrder,
+  Route, InsertRoute,
+  WorkOrderPhoto, InsertWorkOrderPhoto,
+  WorkOrderStep, InsertWorkOrderStep
 } from "@shared/schema";
 import { db } from "./db";
-import { users, userSessions, personnel, documents, projects, projectAssignments, safetyEquipment, training, alerts } from "@shared/schema";
+import { users, userSessions, personnel, documents, projects, projectAssignments, safetyEquipment, training, alerts, crews, crewMembers, workOrders, routes, workOrderPhotos, workOrderSteps } from "@shared/schema";
 import { eq, and, lte, gte, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -90,6 +96,51 @@ export interface IStorage {
     availableStaff: number;
     activeProjects: number;
   }>;
+
+  // Crews
+  getAllCrews(): Promise<Crew[]>;
+  getCrew(id: number): Promise<Crew | undefined>;
+  createCrew(crew: InsertCrew): Promise<Crew>;
+  updateCrew(id: number, crew: Partial<InsertCrew>): Promise<Crew | undefined>;
+  deleteCrew(id: number): Promise<boolean>;
+  getAvailableCrews(): Promise<Crew[]>;
+
+  // Crew Members
+  getCrewMembers(crewId: number): Promise<CrewMember[]>;
+  addCrewMember(crewMember: InsertCrewMember): Promise<CrewMember>;
+  removeCrewMember(id: number): Promise<boolean>;
+  updateCrewMember(id: number, crewMember: Partial<InsertCrewMember>): Promise<CrewMember | undefined>;
+
+  // Work Orders
+  getAllWorkOrders(): Promise<WorkOrder[]>;
+  getWorkOrder(id: number): Promise<WorkOrder | undefined>;
+  createWorkOrder(workOrder: InsertWorkOrder): Promise<WorkOrder>;
+  updateWorkOrder(id: number, workOrder: Partial<InsertWorkOrder>): Promise<WorkOrder | undefined>;
+  deleteWorkOrder(id: number): Promise<boolean>;
+  getWorkOrdersByStatus(status: string): Promise<WorkOrder[]>;
+  getWorkOrdersByCrew(crewId: number): Promise<WorkOrder[]>;
+  assignWorkOrderToCrew(workOrderId: number, crewId: number): Promise<boolean>;
+
+  // Routes
+  getAllRoutes(): Promise<Route[]>;
+  getRoute(id: number): Promise<Route | undefined>;
+  createRoute(route: InsertRoute): Promise<Route>;
+  updateRoute(id: number, route: Partial<InsertRoute>): Promise<Route | undefined>;
+  deleteRoute(id: number): Promise<boolean>;
+  getRoutesByCrew(crewId: number): Promise<Route[]>;
+  getRoutesByDate(date: string): Promise<Route[]>;
+
+  // Work Order Photos
+  getWorkOrderPhotos(workOrderId: number): Promise<WorkOrderPhoto[]>;
+  createWorkOrderPhoto(photo: InsertWorkOrderPhoto): Promise<WorkOrderPhoto>;
+  deleteWorkOrderPhoto(id: number): Promise<boolean>;
+  updateWorkOrderPhoto(id: number, photo: Partial<InsertWorkOrderPhoto>): Promise<WorkOrderPhoto | undefined>;
+
+  // Work Order Steps
+  getWorkOrderSteps(workOrderId: number): Promise<WorkOrderStep[]>;
+  createWorkOrderStep(step: InsertWorkOrderStep): Promise<WorkOrderStep>;
+  updateWorkOrderStep(id: number, step: Partial<InsertWorkOrderStep>): Promise<WorkOrderStep | undefined>;
+  completeWorkOrderStep(id: number, completedBy: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -472,6 +523,223 @@ export class DatabaseStorage implements IStorage {
       availableStaff,
       activeProjects,
     };
+  }
+
+  // Crews implementation
+  async getAllCrews(): Promise<Crew[]> {
+    return await db.select().from(crews);
+  }
+
+  async getCrew(id: number): Promise<Crew | undefined> {
+    const [crew] = await db.select().from(crews).where(eq(crews.id, id));
+    return crew || undefined;
+  }
+
+  async createCrew(insertCrew: InsertCrew): Promise<Crew> {
+    const [crew] = await db
+      .insert(crews)
+      .values(insertCrew)
+      .returning();
+    return crew;
+  }
+
+  async updateCrew(id: number, update: Partial<InsertCrew>): Promise<Crew | undefined> {
+    const [crew] = await db
+      .update(crews)
+      .set({ ...update, updatedAt: new Date() })
+      .where(eq(crews.id, id))
+      .returning();
+    return crew || undefined;
+  }
+
+  async deleteCrew(id: number): Promise<boolean> {
+    const result = await db.delete(crews).where(eq(crews.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getAvailableCrews(): Promise<Crew[]> {
+    return await db.select().from(crews).where(eq(crews.status, 'available'));
+  }
+
+  // Crew Members implementation
+  async getCrewMembers(crewId: number): Promise<CrewMember[]> {
+    return await db.select().from(crewMembers).where(eq(crewMembers.crewId, crewId));
+  }
+
+  async addCrewMember(insertCrewMember: InsertCrewMember): Promise<CrewMember> {
+    const [crewMember] = await db
+      .insert(crewMembers)
+      .values(insertCrewMember)
+      .returning();
+    return crewMember;
+  }
+
+  async removeCrewMember(id: number): Promise<boolean> {
+    const result = await db.delete(crewMembers).where(eq(crewMembers.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async updateCrewMember(id: number, update: Partial<InsertCrewMember>): Promise<CrewMember | undefined> {
+    const [crewMember] = await db
+      .update(crewMembers)
+      .set(update)
+      .where(eq(crewMembers.id, id))
+      .returning();
+    return crewMember || undefined;
+  }
+
+  // Work Orders implementation
+  async getAllWorkOrders(): Promise<WorkOrder[]> {
+    return await db.select().from(workOrders);
+  }
+
+  async getWorkOrder(id: number): Promise<WorkOrder | undefined> {
+    const [workOrder] = await db.select().from(workOrders).where(eq(workOrders.id, id));
+    return workOrder || undefined;
+  }
+
+  async createWorkOrder(insertWorkOrder: InsertWorkOrder): Promise<WorkOrder> {
+    const [workOrder] = await db
+      .insert(workOrders)
+      .values(insertWorkOrder)
+      .returning();
+    return workOrder;
+  }
+
+  async updateWorkOrder(id: number, update: Partial<InsertWorkOrder>): Promise<WorkOrder | undefined> {
+    const [workOrder] = await db
+      .update(workOrders)
+      .set({ ...update, updatedAt: new Date() })
+      .where(eq(workOrders.id, id))
+      .returning();
+    return workOrder || undefined;
+  }
+
+  async deleteWorkOrder(id: number): Promise<boolean> {
+    const result = await db.delete(workOrders).where(eq(workOrders.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getWorkOrdersByStatus(status: string): Promise<WorkOrder[]> {
+    return await db.select().from(workOrders).where(eq(workOrders.status, status));
+  }
+
+  async getWorkOrdersByCrew(crewId: number): Promise<WorkOrder[]> {
+    return await db.select().from(workOrders).where(eq(workOrders.assignedCrewId, crewId));
+  }
+
+  async assignWorkOrderToCrew(workOrderId: number, crewId: number): Promise<boolean> {
+    const result = await db
+      .update(workOrders)
+      .set({ 
+        assignedCrewId: crewId,
+        assignedDate: new Date().toISOString().split('T')[0],
+        status: 'assigned',
+        updatedAt: new Date()
+      })
+      .where(eq(workOrders.id, workOrderId));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Routes implementation
+  async getAllRoutes(): Promise<Route[]> {
+    return await db.select().from(routes);
+  }
+
+  async getRoute(id: number): Promise<Route | undefined> {
+    const [route] = await db.select().from(routes).where(eq(routes.id, id));
+    return route || undefined;
+  }
+
+  async createRoute(insertRoute: InsertRoute): Promise<Route> {
+    const [route] = await db
+      .insert(routes)
+      .values(insertRoute)
+      .returning();
+    return route;
+  }
+
+  async updateRoute(id: number, update: Partial<InsertRoute>): Promise<Route | undefined> {
+    const [route] = await db
+      .update(routes)
+      .set({ ...update, updatedAt: new Date() })
+      .where(eq(routes.id, id))
+      .returning();
+    return route || undefined;
+  }
+
+  async deleteRoute(id: number): Promise<boolean> {
+    const result = await db.delete(routes).where(eq(routes.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getRoutesByCrew(crewId: number): Promise<Route[]> {
+    return await db.select().from(routes).where(eq(routes.crewId, crewId));
+  }
+
+  async getRoutesByDate(date: string): Promise<Route[]> {
+    return await db.select().from(routes).where(eq(routes.routeDate, date));
+  }
+
+  // Work Order Photos implementation
+  async getWorkOrderPhotos(workOrderId: number): Promise<WorkOrderPhoto[]> {
+    return await db.select().from(workOrderPhotos).where(eq(workOrderPhotos.workOrderId, workOrderId));
+  }
+
+  async createWorkOrderPhoto(insertPhoto: InsertWorkOrderPhoto): Promise<WorkOrderPhoto> {
+    const [photo] = await db
+      .insert(workOrderPhotos)
+      .values(insertPhoto)
+      .returning();
+    return photo;
+  }
+
+  async deleteWorkOrderPhoto(id: number): Promise<boolean> {
+    const result = await db.delete(workOrderPhotos).where(eq(workOrderPhotos.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async updateWorkOrderPhoto(id: number, update: Partial<InsertWorkOrderPhoto>): Promise<WorkOrderPhoto | undefined> {
+    const [photo] = await db
+      .update(workOrderPhotos)
+      .set(update)
+      .where(eq(workOrderPhotos.id, id))
+      .returning();
+    return photo || undefined;
+  }
+
+  // Work Order Steps implementation
+  async getWorkOrderSteps(workOrderId: number): Promise<WorkOrderStep[]> {
+    return await db.select().from(workOrderSteps).where(eq(workOrderSteps.workOrderId, workOrderId));
+  }
+
+  async createWorkOrderStep(insertStep: InsertWorkOrderStep): Promise<WorkOrderStep> {
+    const [step] = await db
+      .insert(workOrderSteps)
+      .values(insertStep)
+      .returning();
+    return step;
+  }
+
+  async updateWorkOrderStep(id: number, update: Partial<InsertWorkOrderStep>): Promise<WorkOrderStep | undefined> {
+    const [step] = await db
+      .update(workOrderSteps)
+      .set(update)
+      .where(eq(workOrderSteps.id, id))
+      .returning();
+    return step || undefined;
+  }
+
+  async completeWorkOrderStep(id: number, completedBy: number): Promise<boolean> {
+    const result = await db
+      .update(workOrderSteps)
+      .set({
+        status: 'completed',
+        completedAt: new Date(),
+        completedBy
+      })
+      .where(eq(workOrderSteps.id, id));
+    return (result.rowCount || 0) > 0;
   }
 }
 

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, numeric, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 import { z } from "zod";
@@ -59,6 +59,9 @@ export const documents = pgTable("documents", {
   issuingAuthority: text("issuing_authority"),
   status: text("status").notNull().default("valid"), // valid, expired, expiring_soon, pending
   filePath: text("file_path"),
+  fileName: text("file_name"),
+  fileSize: integer("file_size"),
+  mimeType: text("mime_type"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -147,6 +150,149 @@ export const alerts = pgTable("alerts", {
   resolvedAt: timestamp("resolved_at"),
 });
 
+// Cuadrillas (Work Crews)
+export const crews = pgTable("crews", {
+  id: serial("id").primaryKey(),
+  crewName: text("crew_name").notNull(),
+  crewCode: text("crew_code").notNull().unique(),
+  leaderId: integer("leader_id"), // Personnel ID of crew leader
+  specialization: text("specialization").notNull(), // transformer_maintenance, electrical_repair, emergency_response
+  maxCapacity: integer("max_capacity").notNull().default(6),
+  currentSize: integer("current_size").notNull().default(0),
+  status: text("status").notNull().default("available"), // available, assigned, maintenance, inactive
+  baseLocation: text("base_location").notNull(),
+  contactPhone: text("contact_phone"),
+  equipment: text("equipment").array(), // Array of equipment IDs or names
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Crew Members Assignment
+export const crewMembers = pgTable("crew_members", {
+  id: serial("id").primaryKey(),
+  crewId: integer("crew_id").notNull(),
+  personnelId: integer("personnel_id").notNull(),
+  role: text("role").notNull(), // leader, technician, apprentice, driver, safety_officer
+  assignedDate: text("assigned_date").notNull(),
+  status: text("status").notNull().default("active"), // active, temporary, inactive
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Work Orders / Repair Orders
+export const workOrders = pgTable("work_orders", {
+  id: serial("id").primaryKey(),
+  orderNumber: text("order_number").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  workType: text("work_type").notNull(), // preventive_maintenance, emergency_repair, inspection, installation
+  priority: text("priority").notNull().default("medium"), // low, medium, high, emergency
+  status: text("status").notNull().default("pending"), // pending, assigned, in_progress, completed, cancelled
+  
+  // Location details
+  facilityName: text("facility_name").notNull(),
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  zipCode: text("zip_code"),
+  latitude: numeric("latitude"),
+  longitude: numeric("longitude"),
+  
+  // Assignment details
+  assignedCrewId: integer("assigned_crew_id"),
+  assignedDate: text("assigned_date"),
+  scheduledDate: text("scheduled_date"),
+  estimatedDuration: integer("estimated_duration"), // hours
+  
+  // Completion details
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  actualDuration: integer("actual_duration"), // hours
+  
+  // Contact and client info
+  clientContact: text("client_contact"),
+  clientPhone: text("client_phone"),
+  emergencyContact: text("emergency_contact"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Route Optimization and Planning
+export const routes = pgTable("routes", {
+  id: serial("id").primaryKey(),
+  routeName: text("route_name").notNull(),
+  crewId: integer("crew_id").notNull(),
+  routeDate: text("route_date").notNull(),
+  status: text("status").notNull().default("planned"), // planned, active, completed, cancelled
+  
+  // Route optimization data
+  totalDistance: numeric("total_distance"), // kilometers
+  estimatedTravelTime: integer("estimated_travel_time"), // minutes
+  actualTravelTime: integer("actual_travel_time"), // minutes
+  fuelEstimate: numeric("fuel_estimate"), // liters
+  
+  // Route waypoints (JSON array of work order IDs in order)
+  workOrderSequence: text("work_order_sequence").array(),
+  optimizationScore: numeric("optimization_score"), // 0-100 efficiency score
+  
+  startLocation: text("start_location"), // Starting depot/base
+  endLocation: text("end_location"), // Ending location
+  
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Work Order Photos and Documentation
+export const workOrderPhotos = pgTable("work_order_photos", {
+  id: serial("id").primaryKey(),
+  workOrderId: integer("work_order_id").notNull(),
+  photoType: text("photo_type").notNull(), // before, during, after, issue, equipment, safety
+  filePath: text("file_path").notNull(),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size"),
+  mimeType: text("mime_type"),
+  
+  // Photo metadata
+  description: text("description"),
+  takenAt: timestamp("taken_at").defaultNow(),
+  gpsLatitude: numeric("gps_latitude"),
+  gpsLongitude: numeric("gps_longitude"),
+  takenBy: integer("taken_by"), // Personnel ID
+  
+  // Watermark info
+  hasWatermark: boolean("has_watermark").default(false),
+  watermarkText: text("watermark_text"),
+  originalFilePath: text("original_file_path"), // Path to original before watermark
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Work Order Progress and Steps
+export const workOrderSteps = pgTable("work_order_steps", {
+  id: serial("id").primaryKey(),
+  workOrderId: integer("work_order_id").notNull(),
+  stepNumber: integer("step_number").notNull(),
+  stepTitle: text("step_title").notNull(),
+  stepDescription: text("step_description").notNull(),
+  
+  status: text("status").notNull().default("pending"), // pending, in_progress, completed, skipped
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  completedBy: integer("completed_by"), // Personnel ID
+  
+  // Requirements and verification
+  requiresPhoto: boolean("requires_photo").default(false),
+  requiresSignature: boolean("requires_signature").default(false),
+  requiresApproval: boolean("requires_approval").default(false),
+  
+  notes: text("notes"),
+  verificationData: text("verification_data"), // JSON for measurements, readings, etc.
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -198,6 +344,39 @@ export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
   createdAt: true,
 });
 
+export const insertCrewSchema = createInsertSchema(crews).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCrewMemberSchema = createInsertSchema(crewMembers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertWorkOrderSchema = createInsertSchema(workOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRouteSchema = createInsertSchema(routes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWorkOrderPhotoSchema = createInsertSchema(workOrderPhotos).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertWorkOrderStepSchema = createInsertSchema(workOrderSteps).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -225,6 +404,24 @@ export type InsertTraining = z.infer<typeof insertTrainingSchema>;
 
 export type Alert = typeof alerts.$inferSelect;
 export type InsertAlert = z.infer<typeof insertAlertSchema>;
+
+export type Crew = typeof crews.$inferSelect;
+export type InsertCrew = z.infer<typeof insertCrewSchema>;
+
+export type CrewMember = typeof crewMembers.$inferSelect;
+export type InsertCrewMember = z.infer<typeof insertCrewMemberSchema>;
+
+export type WorkOrder = typeof workOrders.$inferSelect;
+export type InsertWorkOrder = z.infer<typeof insertWorkOrderSchema>;
+
+export type Route = typeof routes.$inferSelect;
+export type InsertRoute = z.infer<typeof insertRouteSchema>;
+
+export type WorkOrderPhoto = typeof workOrderPhotos.$inferSelect;
+export type InsertWorkOrderPhoto = z.infer<typeof insertWorkOrderPhotoSchema>;
+
+export type WorkOrderStep = typeof workOrderSteps.$inferSelect;
+export type InsertWorkOrderStep = z.infer<typeof insertWorkOrderStepSchema>;
 
 // Define relations
 export const usersRelations = relations(users, ({ many }) => ({

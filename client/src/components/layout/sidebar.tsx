@@ -11,6 +11,9 @@ import {
   HardHat,
   BarChart3,
   Download,
+  UsersIcon,
+  Zap,
+  MapPin,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -59,6 +62,21 @@ const menuItems = [
         name: "Proyectos",
         href: "/proyectos",
         icon: FolderOpen,
+      },
+      {
+        name: "Cuadrillas",
+        href: "/cuadrillas",
+        icon: UsersIcon,
+      },
+      {
+        name: "Órdenes de Trabajo",
+        href: "/ordenes-trabajo",
+        icon: Zap,
+      },
+      {
+        name: "Rutas Optimizadas",
+        href: "/rutas",
+        icon: MapPin,
       },
       {
         name: "Asignaciones",

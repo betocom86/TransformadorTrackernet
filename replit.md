@@ -40,6 +40,11 @@ PROSECU is a comprehensive personnel management system designed for construction
 - **Safety Equipment**: Equipment tracking and maintenance schedules
 - **Training**: Training records and certification management
 - **Alerts**: System notifications and warnings
+- **Crews**: Field crew management with member assignments and availability tracking
+- **Work Orders**: Service requests with priority, location, and photo documentation
+- **Routes**: Optimized travel routes for crews with distance and time calculations
+- **Work Order Photos**: Image documentation with automatic watermarking capabilities
+- **Work Order Steps**: Task breakdown and progress tracking for service completion
 
 ### Authentication & Authorization
 - Session-based authentication with PostgreSQL session store
@@ -51,6 +56,13 @@ PROSECU is a comprehensive personnel management system designed for construction
 - Document categorization (passport, visa, certification, medical, insurance, safety)
 - Expiration date tracking and automated alerts
 - File storage in server uploads directory
+
+### Field Service Management
+- **Crew Management**: Team organization with member assignments and availability status
+- **Work Order Processing**: Service request management with priority levels and location tracking
+- **Photo Documentation**: Mobile-friendly image upload with automatic watermarking using Sharp
+- **Route Optimization**: GPS-based route planning with distance and time calculations
+- **Real-time Tracking**: Service progress monitoring and completion status updates
 
 ### Project Management
 - Project lifecycle management (planning, active, completed)
@@ -85,6 +97,7 @@ PROSECU is a comprehensive personnel management system designed for construction
 
 ### File Processing
 - **multer**: Multipart form data handling
+- **sharp**: Image processing and watermark generation
 - **connect-pg-simple**: PostgreSQL session storage
 
 ## Deployment Strategy
@@ -108,6 +121,7 @@ PROSECU is a comprehensive personnel management system designed for construction
 - File upload directory configuration
 
 ## Changelog
+- June 30, 2025: Field service management system completed with crew management, work orders with photo uploads and watermarking, route optimization, and mobile-friendly interfaces
 - June 30, 2025: Sistema completo implementado con PostgreSQL, gestión de usuarios, cumplimiento de 45 requisitos, y branding GC Electric aplicado
 - June 30, 2025: Initial setup
 

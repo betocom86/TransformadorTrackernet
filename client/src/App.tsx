@@ -11,6 +11,9 @@ import Projects from "@/pages/projects";
 import Documents from "@/pages/documents";
 import Certifications from "@/pages/certifications";
 import Compliance from "@/pages/compliance";
+import Crews from "@/pages/crews";
+import WorkOrders from "@/pages/work-orders";
+import Routes from "@/pages/routes";
 import Login from "@/pages/login";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
@@ -49,6 +52,9 @@ function Router() {
             <Route path="/documentos" component={Documents} />
             <Route path="/certificaciones" component={Certifications} />
             <Route path="/cumplimiento" component={Compliance} />
+            <Route path="/cuadrillas" component={Crews} />
+            <Route path="/ordenes-trabajo" component={WorkOrders} />
+            <Route path="/rutas" component={Routes} />
             <Route path="/login" component={Login} />
             <Route component={NotFound} />
           </Switch>

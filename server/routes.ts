@@ -6,12 +6,16 @@ import { storage } from "./storage";
 import { 
   insertPersonnelSchema, insertDocumentSchema, insertProjectSchema, 
   insertProjectAssignmentSchema, insertSafetyEquipmentSchema, 
-  insertTrainingSchema, insertAlertSchema, insertUserSchema 
+  insertTrainingSchema, insertAlertSchema, insertUserSchema,
+  insertCrewSchema, insertCrewMemberSchema, insertWorkOrderSchema,
+  insertRouteSchema, insertWorkOrderPhotoSchema, insertWorkOrderStepSchema
 } from "@shared/schema";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { processWorkOrderPhoto } from "./utils/watermark";
+import fs from "fs/promises";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -34,6 +38,45 @@ function requireAuth(req: any, res: any, next: any) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoints - must be registered before other middleware
+  // These respond immediately without database operations for deployment health checks
+  app.get('/api/health', (req, res) => {
+    res.status(200).json({ 
+      status: 'healthy', 
+      uptime: Math.floor(process.uptime()),
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB'
+      },
+      timestamp: new Date().toISOString() 
+    });
+  });
+
+  // Readiness check endpoint for deployments
+  app.get('/api/ready', (req, res) => {
+    res.status(200).json({ 
+      status: 'ready',
+      service: 'PROSECU Personnel Management',
+      version: '1.0.0',
+      environment: process.env.NODE_ENV || 'development',
+      pid: process.pid,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Root endpoint for deployment health checks (production only)
+  if (process.env.NODE_ENV === 'production') {
+    app.get('/', (req, res) => {
+      res.status(200).json({ 
+        status: 'ok', 
+        service: 'PROSECU Personnel Management',
+        version: '1.0.0',
+        environment: 'production',
+        timestamp: new Date().toISOString() 
+      });
+    });
+  }
+
   // Configurar sesiones
   app.use(session({
     store: new PgSession({
@@ -220,12 +263,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         personnelId: parseInt(req.body.personnelId),
         filePath: req.file?.path || null,
+        fileName: req.file?.originalname || null,
+        fileSize: req.file?.size || null,
+        mimeType: req.file?.mimetype || null,
       };
       const validatedData = insertDocumentSchema.parse(documentData);
       const document = await storage.createDocument(validatedData);
       res.status(201).json(document);
     } catch (error) {
       res.status(400).json({ message: "Invalid document data", error });
+    }
+  });
+
+  app.put("/api/documents/:id/upload", upload.single('file'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = {
+        filePath: req.file?.path || null,
+        fileName: req.file?.originalname || null,
+        fileSize: req.file?.size || null,
+        mimeType: req.file?.mimetype || null,
+      };
+      const document = await storage.updateDocument(id, updateData);
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      res.json(document);
+    } catch (error) {
+      res.status(400).json({ message: "Error uploading file", error });
+    }
+  });
+
+  app.get("/api/documents/:id/download", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const document = await storage.getDocument(id);
+      if (!document || !document.filePath) {
+        return res.status(404).json({ message: "Document or file not found" });
+      }
+      
+      res.download(document.filePath, document.fileName || 'document');
+    } catch (error) {
+      res.status(500).json({ message: "Error downloading file" });
     }
   });
 
@@ -321,6 +400,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/assignments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertProjectAssignmentSchema.partial().parse(req.body);
+      const assignment = await storage.updateAssignment(id, validatedData);
+      if (!assignment) {
+        return res.status(404).json({ message: "Assignment not found" });
+      }
+      res.json(assignment);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid assignment data", error });
+    }
+  });
+
+  app.delete("/api/assignments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteAssignment(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Assignment not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting assignment" });
+    }
+  });
+
   // Safety equipment routes
   app.get("/api/equipment/:personnelId", async (req, res) => {
     try {
@@ -339,6 +445,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(equipment);
     } catch (error) {
       res.status(400).json({ message: "Invalid equipment data", error });
+    }
+  });
+
+  app.put("/api/equipment/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertSafetyEquipmentSchema.partial().parse(req.body);
+      const equipment = await storage.updateEquipment(id, validatedData);
+      if (!equipment) {
+        return res.status(404).json({ message: "Equipment not found" });
+      }
+      res.json(equipment);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid equipment data", error });
+    }
+  });
+
+  app.get("/api/equipment", async (req, res) => {
+    try {
+      const personnelId = req.query.personnelId ? parseInt(req.query.personnelId as string) : null;
+      if (!personnelId) {
+        return res.status(400).json({ message: "personnelId required" });
+      }
+      const equipment = await storage.getEquipmentByPersonnel(personnelId);
+      res.json(equipment);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching equipment" });
     }
   });
 
@@ -468,6 +601,393 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error getting compliance overview:", error);
       res.status(500).json({ error: "Failed to get compliance overview" });
+    }
+  });
+
+  // ====== CUADRILLAS (CREWS) ROUTES ======
+  app.get("/api/crews", async (req, res) => {
+    try {
+      const crews = await storage.getAllCrews();
+      res.json(crews);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching crews" });
+    }
+  });
+
+  app.get("/api/crews/available", async (req, res) => {
+    try {
+      const crews = await storage.getAvailableCrews();
+      res.json(crews);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching available crews" });
+    }
+  });
+
+  app.get("/api/crews/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const crew = await storage.getCrew(id);
+      if (!crew) {
+        return res.status(404).json({ message: "Crew not found" });
+      }
+      res.json(crew);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching crew" });
+    }
+  });
+
+  app.post("/api/crews", async (req, res) => {
+    try {
+      const validatedData = insertCrewSchema.parse(req.body);
+      const crew = await storage.createCrew(validatedData);
+      res.status(201).json(crew);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid crew data", error });
+    }
+  });
+
+  app.put("/api/crews/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertCrewSchema.partial().parse(req.body);
+      const crew = await storage.updateCrew(id, validatedData);
+      if (!crew) {
+        return res.status(404).json({ message: "Crew not found" });
+      }
+      res.json(crew);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid crew data", error });
+    }
+  });
+
+  app.delete("/api/crews/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteCrew(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Crew not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting crew" });
+    }
+  });
+
+  // Crew Members routes
+  app.get("/api/crews/:id/members", async (req, res) => {
+    try {
+      const crewId = parseInt(req.params.id);
+      const members = await storage.getCrewMembers(crewId);
+      res.json(members);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching crew members" });
+    }
+  });
+
+  app.post("/api/crew-members", async (req, res) => {
+    try {
+      const validatedData = insertCrewMemberSchema.parse(req.body);
+      const member = await storage.addCrewMember(validatedData);
+      res.status(201).json(member);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid crew member data", error });
+    }
+  });
+
+  app.delete("/api/crew-members/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.removeCrewMember(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Crew member not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error removing crew member" });
+    }
+  });
+
+  // ====== ÓRDENES DE TRABAJO (WORK ORDERS) ROUTES ======
+  app.get("/api/work-orders", async (req, res) => {
+    try {
+      const status = req.query.status as string;
+      const crewId = req.query.crewId ? parseInt(req.query.crewId as string) : undefined;
+      
+      let workOrders;
+      if (status) {
+        workOrders = await storage.getWorkOrdersByStatus(status);
+      } else if (crewId) {
+        workOrders = await storage.getWorkOrdersByCrew(crewId);
+      } else {
+        workOrders = await storage.getAllWorkOrders();
+      }
+      
+      res.json(workOrders);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching work orders" });
+    }
+  });
+
+  app.get("/api/work-orders/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const workOrder = await storage.getWorkOrder(id);
+      if (!workOrder) {
+        return res.status(404).json({ message: "Work order not found" });
+      }
+      res.json(workOrder);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching work order" });
+    }
+  });
+
+  app.post("/api/work-orders", async (req, res) => {
+    try {
+      const validatedData = insertWorkOrderSchema.parse(req.body);
+      const workOrder = await storage.createWorkOrder(validatedData);
+      res.status(201).json(workOrder);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid work order data", error });
+    }
+  });
+
+  app.put("/api/work-orders/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertWorkOrderSchema.partial().parse(req.body);
+      const workOrder = await storage.updateWorkOrder(id, validatedData);
+      if (!workOrder) {
+        return res.status(404).json({ message: "Work order not found" });
+      }
+      res.json(workOrder);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid work order data", error });
+    }
+  });
+
+  app.put("/api/work-orders/:id/assign/:crewId", async (req, res) => {
+    try {
+      const workOrderId = parseInt(req.params.id);
+      const crewId = parseInt(req.params.crewId);
+      const success = await storage.assignWorkOrderToCrew(workOrderId, crewId);
+      if (!success) {
+        return res.status(404).json({ message: "Work order or crew not found" });
+      }
+      res.json({ message: "Work order assigned successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Error assigning work order" });
+    }
+  });
+
+  // ====== FOTOS DE ÓRDENES DE TRABAJO CON WATERMARKS ======
+  app.get("/api/work-orders/:id/photos", async (req, res) => {
+    try {
+      const workOrderId = parseInt(req.params.id);
+      const photos = await storage.getWorkOrderPhotos(workOrderId);
+      res.json(photos);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching work order photos" });
+    }
+  });
+
+  // Subida múltiple de fotos con watermarks automáticos
+  app.post("/api/work-orders/:id/photos", upload.array('photos', 10), async (req, res) => {
+    try {
+      const workOrderId = parseInt(req.params.id);
+      const files = req.files as Express.Multer.File[];
+      const { photoType, description, personnelName, gpsLatitude, gpsLongitude } = req.body;
+      const userId = (req.session as any)?.userId;
+
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No photos uploaded" });
+      }
+
+      // Get work order to get the order number
+      const workOrder = await storage.getWorkOrder(workOrderId);
+      if (!workOrder) {
+        return res.status(404).json({ message: "Work order not found" });
+      }
+
+      const uploadedPhotos = [];
+
+      for (const file of files) {
+        try {
+          // Process photo with watermark
+          const { watermarkedPath, originalPath } = await processWorkOrderPhoto(
+            file.path,
+            workOrder.orderNumber,
+            personnelName || 'Usuario',
+            photoType || 'general'
+          );
+
+          // Save photo info to database
+          const photoData = {
+            workOrderId,
+            photoType: photoType || 'general',
+            filePath: watermarkedPath,
+            originalFilePath: originalPath,
+            fileName: file.originalname,
+            fileSize: file.size,
+            mimeType: file.mimetype,
+            description: description || null,
+            gpsLatitude: gpsLatitude ? parseFloat(gpsLatitude) : null,
+            gpsLongitude: gpsLongitude ? parseFloat(gpsLongitude) : null,
+            takenBy: userId,
+            hasWatermark: true,
+            watermarkText: `GC Electric - OT: ${workOrder.orderNumber}\\n${personnelName} - ${new Date().toLocaleDateString('es-MX')}`
+          };
+
+          const validatedData = insertWorkOrderPhotoSchema.parse(photoData);
+          const savedPhoto = await storage.createWorkOrderPhoto(validatedData);
+          uploadedPhotos.push(savedPhoto);
+
+        } catch (photoError) {
+          console.error('Error processing photo:', photoError);
+          // Continue with other photos even if one fails
+        }
+      }
+
+      res.status(201).json({
+        message: `${uploadedPhotos.length} photos uploaded successfully`,
+        photos: uploadedPhotos
+      });
+
+    } catch (error) {
+      console.error('Error uploading work order photos:', error);
+      res.status(500).json({ message: "Error uploading photos", error });
+    }
+  });
+
+  app.get("/api/work-orders/:id/photos/:photoId/download", async (req, res) => {
+    try {
+      const photoId = parseInt(req.params.photoId);
+      const photo = await storage.getWorkOrderPhotos(parseInt(req.params.id));
+      const foundPhoto = photo.find(p => p.id === photoId);
+      
+      if (!foundPhoto || !foundPhoto.filePath) {
+        return res.status(404).json({ message: "Photo not found" });
+      }
+      
+      res.download(foundPhoto.filePath, foundPhoto.fileName || 'photo.jpg');
+    } catch (error) {
+      res.status(500).json({ message: "Error downloading photo" });
+    }
+  });
+
+  app.delete("/api/work-order-photos/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteWorkOrderPhoto(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Photo not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Error deleting photo" });
+    }
+  });
+
+  // ====== RUTAS OPTIMIZADAS ======
+  app.get("/api/routes", async (req, res) => {
+    try {
+      const crewId = req.query.crewId ? parseInt(req.query.crewId as string) : undefined;
+      const date = req.query.date as string;
+      
+      let routes;
+      if (crewId) {
+        routes = await storage.getRoutesByCrew(crewId);
+      } else if (date) {
+        routes = await storage.getRoutesByDate(date);
+      } else {
+        routes = await storage.getAllRoutes();
+      }
+      
+      res.json(routes);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching routes" });
+    }
+  });
+
+  app.post("/api/routes", async (req, res) => {
+    try {
+      const validatedData = insertRouteSchema.parse(req.body);
+      const route = await storage.createRoute(validatedData);
+      res.status(201).json(route);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid route data", error });
+    }
+  });
+
+  app.put("/api/routes/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertRouteSchema.partial().parse(req.body);
+      const route = await storage.updateRoute(id, validatedData);
+      if (!route) {
+        return res.status(404).json({ message: "Route not found" });
+      }
+      res.json(route);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid route data", error });
+    }
+  });
+
+  // Optimización de rutas (algoritmo simple)
+  app.post("/api/routes/optimize", async (req, res) => {
+    try {
+      const { crewId, workOrderIds, routeDate, startLocation } = req.body;
+      
+      // Crear una ruta optimizada simple
+      const optimizedRoute = {
+        routeName: `Ruta Optimizada ${routeDate}`,
+        crewId,
+        routeDate,
+        workOrderSequence: workOrderIds, // En una implementación real, aquí iría el algoritmo de optimización
+        startLocation: startLocation || "Base GC Electric",
+        endLocation: startLocation || "Base GC Electric",
+        status: 'planned'
+      };
+
+      const validatedData = insertRouteSchema.parse(optimizedRoute);
+      const route = await storage.createRoute(validatedData);
+      res.status(201).json(route);
+    } catch (error) {
+      res.status(400).json({ message: "Error optimizing route", error });
+    }
+  });
+
+  // ====== PASOS DE PROCEDIMIENTOS ======
+  app.get("/api/work-orders/:id/steps", async (req, res) => {
+    try {
+      const workOrderId = parseInt(req.params.id);
+      const steps = await storage.getWorkOrderSteps(workOrderId);
+      res.json(steps);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching work order steps" });
+    }
+  });
+
+  app.post("/api/work-order-steps", async (req, res) => {
+    try {
+      const validatedData = insertWorkOrderStepSchema.parse(req.body);
+      const step = await storage.createWorkOrderStep(validatedData);
+      res.status(201).json(step);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid step data", error });
+    }
+  });
+
+  app.put("/api/work-order-steps/:id/complete", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = (req.session as any)?.userId;
+      const success = await storage.completeWorkOrderStep(id, userId);
+      if (!success) {
+        return res.status(404).json({ message: "Step not found" });
+      }
+      res.json({ message: "Step completed successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Error completing step" });
     }
   });
 

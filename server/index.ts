@@ -8,6 +8,15 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Add startup timeout for deployment health checks
+let serverReady = false;
+setTimeout(() => {
+  if (!serverReady) {
+    log('Server startup timeout - marking as ready anyway');
+    serverReady = true;
+  }
+}, 30000); // 30-second timeout
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -40,10 +49,6 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    // Initialize database with seed data (non-blocking)
-    seedDatabase().catch(err => console.log("Seed warning:", err.message));
-    seedUsers().catch(err => console.log("Users warning:", err.message));
-    
     const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -66,13 +71,45 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = 5000;
-    server.listen({
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    }, () => {
-      log(`serving on port ${port}`);
+  const port = parseInt(process.env.PORT || "5000", 10);
+  const host = process.env.HOST || "0.0.0.0";
+  
+    server.listen(port, host, () => {
+      serverReady = true;
+      log(`serving on ${host}:${port}`);
+      log('Server is ready for health checks');
+      
+      // Initialize database with seed data after server is running (non-blocking)
+      setTimeout(() => {
+        seedDatabase().then(() => {
+          log("Database seeding completed");
+        }).catch(err => {
+          log(`Seed warning: ${err.message}`);
+        });
+        
+        seedUsers().then(() => {
+          log("User seeding completed");
+        }).catch(err => {
+          log(`Users warning: ${err.message}`);
+        });
+      }, 2000); // Delay seeding by 2 seconds to ensure server is fully ready
+    });
+    
+    // Graceful shutdown handling
+    process.on('SIGTERM', () => {
+      log('SIGTERM received, shutting down gracefully');
+      server.close(() => {
+        log('Server closed');
+        process.exit(0);
+      });
+    });
+    
+    process.on('SIGINT', () => {
+      log('SIGINT received, shutting down gracefully');
+      server.close(() => {
+        log('Server closed');
+        process.exit(0);
+      });
     });
     
   } catch (error) {
