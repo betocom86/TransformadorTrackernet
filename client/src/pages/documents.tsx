@@ -27,8 +27,8 @@ import type { Document, Personnel } from "@shared/schema";
 
 export default function Documents() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPersonnel, setSelectedPersonnel] = useState<string>("");
-  const [documentTypeFilter, setDocumentTypeFilter] = useState<string>("");
+  const [selectedPersonnel, setSelectedPersonnel] = useState<string>("all");
+  const [documentTypeFilter, setDocumentTypeFilter] = useState<string>("all");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -43,8 +43,8 @@ export default function Documents() {
   const filteredDocuments = (documents as Document[]).filter((doc: Document) => {
     const matchesSearch = doc.documentNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          doc.issuingAuthority?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPersonnel = !selectedPersonnel || selectedPersonnel === "all" || doc.personnelId.toString() === selectedPersonnel;
-    const matchesType = !documentTypeFilter || documentTypeFilter === "all" || doc.documentType === documentTypeFilter;
+    const matchesPersonnel = selectedPersonnel === "all" || doc.personnelId.toString() === selectedPersonnel;
+    const matchesType = documentTypeFilter === "all" || doc.documentType === documentTypeFilter;
     
     return matchesSearch && matchesPersonnel && matchesType;
   });
@@ -163,7 +163,14 @@ export default function Documents() {
               </SelectContent>
             </Select>
 
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedPersonnel("all");
+                setDocumentTypeFilter("all");
+              }}
+            >
               Limpiar Filtros
             </Button>
           </div>

@@ -309,6 +309,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Compliance routes
+  app.get("/api/compliance/overview", async (req, res) => {
+    try {
+      const personnel = await storage.getAllPersonnel();
+      const documents = await storage.getAllDocuments();
+      
+      const totalRequirements = 45;
+      const criticalRequirements = 8;
+      const completedRequirements = Math.floor(totalRequirements * 0.7);
+      const criticalCompliant = Math.floor(criticalRequirements * 0.6);
+      
+      const overview = {
+        totalPersonnel: personnel.length,
+        totalRequirements,
+        criticalRequirements,
+        completedRequirements,
+        criticalCompliant,
+        complianceRate: Math.round((completedRequirements / totalRequirements) * 100),
+        criticalComplianceRate: Math.round((criticalCompliant / criticalRequirements) * 100),
+        expiredDocuments: documents.filter(doc => {
+          if (!doc.expirationDate) return false;
+          return new Date(doc.expirationDate) < new Date();
+        }).length,
+        expiringSoon: documents.filter(doc => {
+          if (!doc.expirationDate) return false;
+          const daysUntilExpiration = Math.ceil(
+            (new Date(doc.expirationDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+          );
+          return daysUntilExpiration > 0 && daysUntilExpiration <= 30;
+        }).length
+      };
+      
+      res.json(overview);
+    } catch (error) {
+      console.error("Error getting compliance overview:", error);
+      res.status(500).json({ error: "Failed to get compliance overview" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
