@@ -6,8 +6,12 @@ import { storage } from "./storage";
 import { 
   insertPersonnelSchema, insertDocumentSchema, insertProjectSchema, 
   insertProjectAssignmentSchema, insertSafetyEquipmentSchema, 
-  insertTrainingSchema, insertAlertSchema 
+  insertTrainingSchema, insertAlertSchema, insertUserSchema 
 } from "@shared/schema";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -17,7 +21,126 @@ const upload = multer({
   },
 });
 
+// Session configuration
+const PgSession = connectPg(session);
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
+
+// Middleware para verificar autenticación
+function requireAuth(req: any, res: any, next: any) {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: 'No autorizado' });
+  }
+  next();
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Configurar sesiones
+  app.use(session({
+    store: new PgSession({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: true,
+    }),
+    secret: JWT_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false, // Cambiar a true en producción con HTTPS
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 horas
+    }
+  }));
+
+  // Authentication routes
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: "Usuario y contraseña requeridos" });
+      }
+
+      const user = await storage.validateUserCredentials(username, password);
+      if (!user) {
+        return res.status(401).json({ message: "Credenciales inválidas" });
+      }
+
+      // Crear sesión
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
+      
+      res.json({ 
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          email: user.email, 
+          role: user.role,
+          fullName: user.fullName 
+        } 
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Error interno del servidor" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Error al cerrar sesión" });
+      }
+      res.clearCookie('connect.sid');
+      res.json({ message: "Sesión cerrada exitosamente" });
+    });
+  });
+
+  app.get("/api/auth/user", (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "No autenticado" });
+    }
+    
+    storage.getUser(req.session.userId).then(user => {
+      if (!user) {
+        return res.status(404).json({ message: "Usuario no encontrado" });
+      }
+      res.json({ 
+        id: user.id, 
+        username: user.username, 
+        email: user.email, 
+        role: user.role,
+        fullName: user.fullName 
+      });
+    }).catch(error => {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Error interno del servidor" });
+    });
+  });
+
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const validatedData = insertUserSchema.parse(req.body);
+      
+      // Verificar si el usuario ya existe
+      const existingUser = await storage.getUserByUsername(validatedData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "El usuario ya existe" });
+      }
+
+      const user = await storage.createUser(validatedData);
+      res.status(201).json({ 
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          email: user.email, 
+          role: user.role,
+          fullName: user.fullName 
+        } 
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(400).json({ message: "Error en el registro", error });
+    }
+  });
+
   // Personnel routes
   app.get("/api/personnel", async (req, res) => {
     try {

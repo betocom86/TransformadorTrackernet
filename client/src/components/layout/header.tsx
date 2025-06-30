@@ -1,4 +1,4 @@
-import { Bell, Zap, ChevronDown } from "lucide-react";
+import { Bell, Zap, ChevronDown, LogOut, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,11 +6,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Header() {
+  const { user, logout, isLoggingOut } = useAuth();
   const { data: alerts = [] } = useQuery({
     queryKey: ['/api/alerts?active=true'],
   });
@@ -53,22 +56,30 @@ export default function Header() {
                   className="flex items-center space-x-2 text-white hover:text-blue-200 hover:bg-blue-700/20"
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=32&h=32" />
-                    <AvatarFallback>CM</AvatarFallback>
+                    <AvatarFallback>
+                      {user?.fullName?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'U'}
+                    </AvatarFallback>
                   </Avatar>
-                  <span className="hidden md:inline">Carlos Mendoza</span>
+                  <span className="hidden md:inline">{user?.fullName || 'Usuario'}</span>
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem>
-                  Mi Perfil
+                <DropdownMenuItem className="flex items-center space-x-2">
+                  <User className="h-4 w-4" />
+                  <span>Mi Perfil</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   Configuración
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  Cerrar Sesión
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={logout}
+                  disabled={isLoggingOut}
+                  className="flex items-center space-x-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>{isLoggingOut ? 'Cerrando...' : 'Cerrar Sesión'}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
