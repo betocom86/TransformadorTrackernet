@@ -53,6 +53,8 @@ type CrewForm = z.infer<typeof crewSchema>;
 
 export default function Crews() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedCrew, setSelectedCrew] = useState<Crew | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -396,7 +398,14 @@ export default function Crews() {
               )}
               
               <div className="pt-3 border-t">
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => {
+                    setSelectedCrew(crew);
+                    setIsDetailOpen(true);
+                  }}
+                >
                   Ver Detalles
                 </Button>
               </div>
@@ -418,6 +427,142 @@ export default function Crews() {
           </CardContent>
         </Card>
       )}
+
+      {/* Modal de detalle de cuadrilla */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Detalle de Cuadrilla: {selectedCrew?.crewName}
+            </DialogTitle>
+            <DialogDescription>
+              Información completa de la cuadrilla {selectedCrew?.crewCode}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedCrew && (
+            <div className="space-y-6">
+              {/* Información básica */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Nombre</label>
+                    <p className="text-lg font-semibold">{selectedCrew.crewName}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Código</label>
+                    <p className="text-sm">{selectedCrew.crewCode}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Estado</label>
+                    <div className="mt-1">
+                      <Badge className={getStatusColor(selectedCrew.status)}>
+                        {selectedCrew.status === 'available' ? 'Disponible' :
+                         selectedCrew.status === 'assigned' ? 'Asignada' :
+                         selectedCrew.status === 'maintenance' ? 'Mantenimiento' : 'Inactiva'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Especialización</label>
+                    <p className="text-sm">{getSpecializationText(selectedCrew.specialization)}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Capacidad</label>
+                    <p className="text-sm">{selectedCrew.currentSize}/{selectedCrew.maxCapacity} miembros</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Ubicación Base</label>
+                    <p className="text-sm flex items-center gap-1">
+                      <MapPin className="h-4 w-4" />
+                      {selectedCrew.baseLocation}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Información de contacto */}
+              {selectedCrew.contactPhone && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Teléfono de Contacto</label>
+                  <p className="text-sm flex items-center gap-1 mt-1">
+                    <Phone className="h-4 w-4" />
+                    {selectedCrew.contactPhone}
+                  </p>
+                </div>
+              )}
+
+              {/* Equipo */}
+              {selectedCrew.equipment && selectedCrew.equipment.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Equipamiento</label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedCrew.equipment.map((item, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {item}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Notas */}
+              {selectedCrew.notes && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Notas</label>
+                  <p className="text-sm text-gray-500 mt-1 p-3 bg-gray-50 rounded-md">
+                    {selectedCrew.notes}
+                  </p>
+                </div>
+              )}
+
+              {/* Fechas */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Fecha de Creación</label>
+                  <p className="text-xs text-gray-500">
+                    {new Date(selectedCrew.createdAt).toLocaleDateString('es-ES', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+                {selectedCrew.updatedAt && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Última Actualización</label>
+                    <p className="text-xs text-gray-500">
+                      {new Date(selectedCrew.updatedAt).toLocaleDateString('es-ES', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Acciones */}
+              <div className="flex justify-end space-x-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => setIsDetailOpen(false)}>
+                  Cerrar
+                </Button>
+                <Button>
+                  Editar Cuadrilla
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
