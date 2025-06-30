@@ -22,11 +22,13 @@ PROSECU is a comprehensive personnel management system designed for construction
 - **Error Handling**: Centralized error handling middleware
 
 ### Database Architecture
-- **Database**: PostgreSQL with connection pooling
+- **Database**: PostgreSQL with connection pooling (actively connected)
 - **ORM**: Drizzle ORM for type-safe database operations
 - **Connection**: Neon Database serverless PostgreSQL
 - **Migrations**: Drizzle Kit for schema migrations
 - **Schema**: Shared TypeScript schema definitions with Zod validation
+- **Storage**: DatabaseStorage class implementing full CRUD operations
+- **Sample Data**: Comprehensive seed data for Mexican transformer maintenance scenarios
 
 ## Key Components
 
