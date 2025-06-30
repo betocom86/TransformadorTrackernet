@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { Loader2, User, Lock } from "lucide-react";
@@ -31,6 +31,8 @@ export default function Login() {
     resolver: zodResolver(loginSchema),
   });
 
+  const queryClient = useQueryClient();
+
   const loginMutation = useMutation({
     mutationFn: async (data: LoginForm) => {
       return await apiRequest("/api/auth/login", {
@@ -39,8 +41,13 @@ export default function Login() {
         body: JSON.stringify(data),
       });
     },
-    onSuccess: () => {
-      setLocation("/");
+    onSuccess: (userData) => {
+      // Actualizar la caché con los datos del usuario
+      queryClient.setQueryData(["/api/auth/user"], userData.user);
+      // Invalidar la query para forzar una nueva consulta
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Redirigir al dashboard
+      setLocation("/dashboard");
     },
     onError: (error: any) => {
       console.error("Login error:", error);
