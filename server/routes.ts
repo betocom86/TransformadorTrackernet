@@ -133,7 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/personnel/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const person = await storage.getPersonnel(id);
+      const person = await storage.getPersonnelById(id);
       if (!person) {
         return res.status(404).json({ message: "Personnel not found" });
       }
@@ -185,7 +185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const personnelId = req.query.personnelId ? parseInt(req.query.personnelId as string) : undefined;
       const documents = personnelId 
-        ? await storage.getDocumentsByPersonnel(personnelId)
+        ? await storage.getDocumentsByPersonnelId(personnelId)
         : await storage.getAllDocuments();
       res.json(documents);
     } catch (error) {
@@ -233,7 +233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/documents/:id/download", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const document = await storage.getDocument(id);
+      const document = await storage.getDocumentById(id);
       if (!document || !document.filePath) {
         return res.status(404).json({ message: "Document or file not found" });
       }
@@ -415,7 +415,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/training/:personnelId", async (req, res) => {
     try {
       const personnelId = parseInt(req.params.personnelId);
-      const training = await storage.getTrainingByPersonnel(personnelId);
+      const training = await storage.getTrainingByPersonnelId(personnelId);
       res.json(training);
     } catch (error) {
       res.status(500).json({ message: "Error fetching training" });
@@ -562,7 +562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/crews/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const crew = await storage.getCrew(id);
+      const crew = await storage.getCrewById(id);
       if (!crew) {
         return res.status(404).json({ message: "Crew not found" });
       }
@@ -667,7 +667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/work-orders/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const workOrder = await storage.getWorkOrder(id);
+      const workOrder = await storage.getWorkOrderById(id);
       if (!workOrder) {
         return res.status(404).json({ message: "Work order not found" });
       }
@@ -940,7 +940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/transformers/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const transformer = await storage.getTransformer(id);
+      const transformer = await storage.getTransformerById(id);
       if (!transformer) {
         return res.status(404).json({ message: "Transformer not found" });
       }
@@ -1010,7 +1010,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/procedures/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const procedure = await storage.getProcedure(id);
+      const procedure = await storage.getProcedureById(id);
       if (!procedure) {
         return res.status(404).json({ message: "Procedure not found" });
       }

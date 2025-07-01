@@ -1,96 +1,254 @@
-import { useEffect } from "react";
-import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Wrench, FileCheck, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { 
+  Users, 
+  ClipboardList, 
+  Shield, 
+  Zap, 
+  TrendingUp, 
+  AlertTriangle,
+  CheckCircle,
+  Calendar
+} from "lucide-react";
 
 export default function Home() {
-  const [, navigate] = useLocation();
   const { user } = useAuth();
 
-  // Redirect to dashboard after a brief welcome
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      navigate("/dashboard");
-    }, 3000);
+  const { data: dashboardStats } = useQuery({
+    queryKey: ["/api/dashboard/stats"],
+  });
 
-    return () => clearTimeout(timer);
-  }, [navigate]);
+  const { data: alerts } = useQuery({
+    queryKey: ["/api/alerts"],
+  });
 
-  const handleDashboard = () => {
-    navigate("/dashboard");
-  };
+  const { data: projects } = useQuery({
+    queryKey: ["/api/projects"],
+  });
+
+  const { data: personnel } = useQuery({
+    queryKey: ["/api/personnel"],
+  });
+
+  const userName = user?.firstName && user?.lastName 
+    ? `${user.firstName} ${user.lastName}` 
+    : user?.firstName || "User";
+
+  const activeAlerts = alerts?.filter((alert: any) => !alert.resolvedAt) || [];
+  const activeProjects = projects?.filter((project: any) => project.status === 'active') || [];
+  const totalPersonnel = personnel?.length || 0;
+
+  const quickActions = [
+    { 
+      icon: Users, 
+      title: "Manage Personnel", 
+      description: "Add, edit, or view personnel records",
+      href: "/personnel",
+      color: "text-blue-600"
+    },
+    { 
+      icon: ClipboardList, 
+      title: "Work Orders", 
+      description: "Create and manage work orders",
+      href: "/work-orders",
+      color: "text-green-600"
+    },
+    { 
+      icon: Shield, 
+      title: "Safety & Compliance", 
+      description: "Monitor compliance and safety",
+      href: "/compliance",
+      color: "text-orange-600"
+    },
+    { 
+      icon: Zap, 
+      title: "Field Operations", 
+      description: "Manage crews and routes",
+      href: "/crews",
+      color: "text-purple-600"
+    }
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-16">
-        {/* Welcome Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Bienvenido a PROSECU
+    <div className="space-y-8">
+      {/* Welcome Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Welcome back, {userName}!
           </h1>
-          <p className="text-xl text-gray-600 mb-8">
-            {user?.firstName && user?.lastName 
-              ? `Hola ${user.firstName} ${user.lastName}` 
-              : 'Sistema de Gestión de Personal'}
+          <p className="text-gray-600 mt-2">
+            Here's what's happening with your operations today.
           </p>
-          <Button 
-            onClick={handleDashboard}
-            size="lg" 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
-          >
-            Ir al Dashboard
-          </Button>
         </div>
+        <Badge variant="outline" className="text-sm">
+          GC Electric - PROSECU System
+        </Badge>
+      </div>
 
-        {/* Quick Access Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/personal")}>
-            <CardHeader>
-              <Users className="h-8 w-8 text-blue-600 mb-2" />
-              <CardTitle className="text-lg">Personal</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 text-sm">Gestionar expedientes y documentos del personal</p>
-            </CardContent>
-          </Card>
+      {/* Active Alerts */}
+      {activeAlerts.length > 0 && (
+        <Alert className="border-orange-200 bg-orange-50">
+          <AlertTriangle className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-800">
+            You have {activeAlerts.length} active alert{activeAlerts.length !== 1 ? 's' : ''} 
+            that require attention.
+          </AlertDescription>
+        </Alert>
+      )}
 
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/cuadrillas")}>
-            <CardHeader>
-              <Wrench className="h-8 w-8 text-green-600 mb-2" />
-              <CardTitle className="text-lg">Cuadrillas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 text-sm">Administrar equipos de trabajo y asignaciones</p>
-            </CardContent>
-          </Card>
+      {/* Dashboard Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Personnel</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dashboardStats?.totalPersonnel || totalPersonnel}</div>
+            <p className="text-xs text-muted-foreground">Active employees</p>
+          </CardContent>
+        </Card>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/cumplimiento")}>
-            <CardHeader>
-              <FileCheck className="h-8 w-8 text-purple-600 mb-2" />
-              <CardTitle className="text-lg">Cumplimiento</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 text-sm">Monitorear certificaciones y documentos</p>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Crews</CardTitle>
+            <Zap className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dashboardStats?.totalCrews || "0"}</div>
+            <p className="text-xs text-muted-foreground">Field crews available</p>
+          </CardContent>
+        </Card>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/ordenes-trabajo")}>
-            <CardHeader>
-              <AlertTriangle className="h-8 w-8 text-red-600 mb-2" />
-              <CardTitle className="text-lg">Órdenes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 text-sm">Revisar órdenes de trabajo pendientes</p>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Work Orders</CardTitle>
+            <ClipboardList className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dashboardStats?.totalWorkOrders || "0"}</div>
+            <p className="text-xs text-muted-foreground">Active work orders</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Compliance Rate</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dashboardStats?.complianceRate || "95%"}</div>
+            <p className="text-xs text-muted-foreground">Safety compliance</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickActions.map((action) => {
+            const IconComponent = action.icon;
+            return (
+              <Card key={action.title} className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center space-x-2">
+                    <IconComponent className={`h-5 w-5 ${action.color}`} />
+                    <CardTitle className="text-sm">{action.title}</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <CardDescription className="text-xs mb-3">
+                    {action.description}
+                  </CardDescription>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => window.location.href = action.href}
+                  >
+                    Open
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
+      </div>
 
-        {/* Auto-redirect message */}
-        <div className="text-center text-gray-500">
-          <p>Serás redirigido al dashboard automáticamente en unos segundos...</p>
-        </div>
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Calendar className="h-5 w-5" />
+              <span>Active Projects</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {activeProjects.length > 0 ? (
+              <div className="space-y-3">
+                {activeProjects.slice(0, 3).map((project: any) => (
+                  <div key={project.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <div>
+                      <p className="font-medium text-sm">{project.name}</p>
+                      <p className="text-xs text-gray-600">{project.location}</p>
+                    </div>
+                    <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
+                      {project.status}
+                    </Badge>
+                  </div>
+                ))}
+                {activeProjects.length > 3 && (
+                  <p className="text-xs text-gray-500 text-center">
+                    +{activeProjects.length - 3} more projects
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-gray-600 text-sm">No active projects</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5" />
+              <span>Recent Alerts</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {activeAlerts.length > 0 ? (
+              <div className="space-y-3">
+                {activeAlerts.slice(0, 3).map((alert: any) => (
+                  <div key={alert.id} className="flex items-start space-x-2 p-2 bg-gray-50 rounded">
+                    <AlertTriangle className="h-4 w-4 text-orange-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{alert.message}</p>
+                      <p className="text-xs text-gray-600">{alert.alertType}</p>
+                    </div>
+                  </div>
+                ))}
+                {activeAlerts.length > 3 && (
+                  <p className="text-xs text-gray-500 text-center">
+                    +{activeAlerts.length - 3} more alerts
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2 text-green-600">
+                <CheckCircle className="h-4 w-4" />
+                <p className="text-sm">No active alerts</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
