@@ -701,11 +701,11 @@ export class DatabaseStorage implements IStorage {
     try {
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + days);
-      
+
       const expiringDocs = await db.select().from(documents)
         .where(
           and(
-            lte(documents.expiryDate, expiryDate.toISOString()),
+            lte(documents.expirationDate, expiryDate.toISOString()),
             eq(documents.status, 'valid')
           )
         );
@@ -842,7 +842,7 @@ export class DatabaseStorage implements IStorage {
       const expiringTraining = await db.select().from(training)
         .where(
           and(
-            lte(training.expiryDate, expiryDate.toISOString()),
+            lte(training.expirationDate, expiryDate.toISOString()),
             eq(training.status, 'valid')
           )
         );
