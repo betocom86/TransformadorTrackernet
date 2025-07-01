@@ -12,6 +12,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Configure for deployment
+app.set('trust proxy', true);
+
 console.log('🚀 Starting PROSECU Personnel Management System...');
 console.log(`📍 Port: ${PORT}`);
 console.log(`🌍 Environment: production`);
