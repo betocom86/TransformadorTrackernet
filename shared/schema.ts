@@ -146,7 +146,9 @@ export const alerts = pgTable("alerts", {
   relatedType: text("related_type"), // document, training, equipment
   dueDate: text("due_date"),
   status: text("status").notNull().default("active"), // active, acknowledged, resolved
+  isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
   acknowledgedAt: timestamp("acknowledged_at"),
   resolvedAt: timestamp("resolved_at"),
 });

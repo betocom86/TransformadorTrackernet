@@ -303,7 +303,7 @@ export class DatabaseStorage implements IStorage {
   async updateSafetyEquipment(id: number, equipmentData: Partial<InsertSafetyEquipment>): Promise<SafetyEquipment | undefined> {
     const [result] = await db
       .update(safetyEquipment)
-      .set({ ...equipmentData, updatedAt: new Date() })
+      .set(equipmentData)
       .where(eq(safetyEquipment.id, id))
       .returning();
     return result;
@@ -336,7 +336,7 @@ export class DatabaseStorage implements IStorage {
   async updateTraining(id: number, trainingData: Partial<InsertTraining>): Promise<Training | undefined> {
     const [result] = await db
       .update(training)
-      .set({ ...trainingData, updatedAt: new Date() })
+      .set(trainingData)
       .where(eq(training.id, id))
       .returning();
     return result;
@@ -369,7 +369,7 @@ export class DatabaseStorage implements IStorage {
   async updateAlert(id: number, alertData: Partial<InsertAlert>): Promise<Alert | undefined> {
     const [result] = await db
       .update(alerts)
-      .set({ ...alertData, updatedAt: new Date() })
+      .set(alertData)
       .where(eq(alerts.id, id))
       .returning();
     return result;
@@ -705,7 +705,7 @@ export class DatabaseStorage implements IStorage {
       const expiringDocs = await db.select().from(documents)
         .where(
           and(
-            lte(documents.expiryDate, expiryDate.toISOString()),
+            lte(documents.expirationDate, expiryDate.toISOString()),
             eq(documents.status, 'valid')
           )
         );
@@ -842,8 +842,8 @@ export class DatabaseStorage implements IStorage {
       const expiringTraining = await db.select().from(training)
         .where(
           and(
-            lte(training.expiryDate, expiryDate.toISOString()),
-            eq(training.status, 'valid')
+            lte(training.expirationDate, expiryDate.toISOString()),
+            eq(training.status, 'active')
           )
         );
       return expiringTraining;
