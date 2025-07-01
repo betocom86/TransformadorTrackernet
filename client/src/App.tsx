@@ -18,34 +18,51 @@ import Procedures from "@/pages/procedures";
 import Transformers from "@/pages/transformers";
 import Landing from "@/pages/landing";
 import Home from "@/pages/home";
+import Alerts from "@/pages/alerts";
+import Reports from "@/pages/reports";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
-  return (
-    <Switch>
-      {isLoading || !isAuthenticated ? (
+  if (isLoading || !isAuthenticated) {
+    return (
+      <Switch>
         <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Home} />
-          <Route path="/dashboard" component={Dashboard} />
-          <Route path="/personal" component={Personnel} />
-          <Route path="/proyectos" component={Projects} />
-          <Route path="/documentos" component={Documents} />
-          <Route path="/certificaciones" component={Certifications} />
-          <Route path="/cumplimiento" component={Compliance} />
-          <Route path="/cuadrillas" component={Crews} />
-          <Route path="/ordenes-trabajo" component={WorkOrders} />
-          <Route path="/rutas" component={Routes} />
-          <Route path="/procedimientos" component={Procedures} />
-          <Route path="/transformadores" component={Transformers} />
-        </>
-      )}
-      <Route component={NotFound} />
-    </Switch>
+        <Route component={NotFound} />
+      </Switch>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="flex">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className="flex-1 p-6">
+            <Switch>
+              <Route path="/" component={Home} />
+              <Route path="/dashboard" component={Dashboard} />
+              <Route path="/personnel" component={Personnel} />
+              <Route path="/projects" component={Projects} />
+              <Route path="/documents" component={Documents} />
+              <Route path="/certifications" component={Certifications} />
+              <Route path="/compliance" component={Compliance} />
+              <Route path="/crews" component={Crews} />
+              <Route path="/work-orders" component={WorkOrders} />
+              <Route path="/routes" component={Routes} />
+              <Route path="/procedures" component={Procedures} />
+              <Route path="/transformers" component={Transformers} />
+              <Route path="/alerts" component={Alerts} />
+              <Route path="/reports" component={Reports} />
+              <Route component={NotFound} />
+            </Switch>
+          </main>
+        </div>
+      </div>
+    </div>
   );
 }
 

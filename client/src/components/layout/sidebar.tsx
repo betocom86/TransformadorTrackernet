@@ -1,173 +1,188 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
+  Home,
   Users,
-  FileText,
-  Award,
+  ClipboardList,
   Shield,
-  FolderOpen,
-  Calendar,
-  HardHat,
-  BarChart3,
-  Download,
-  UsersIcon,
   Zap,
-  MapPin,
-  BookOpen,
+  FileText,
   Settings,
+  Calendar,
+  BarChart3,
+  Wrench,
+  BookOpen,
+  AlertTriangle,
+  Menu,
+  X,
+  Building,
+  Route,
+  Camera
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
 
-const menuItems = [
+const navigationItems = [
   {
-    title: "Panel Principal",
-    items: [
-      {
-        name: "Dashboard",
-        href: "/dashboard",
-        icon: LayoutDashboard,
-      },
-    ],
+    title: "Dashboard",
+    href: "/",
+    icon: Home,
+    badge: null
   },
   {
-    title: "Gestión de Personal",
-    items: [
-      {
-        name: "Personal",
-        href: "/personal",
-        icon: Users,
-        badge: "personalAlerts",
-      },
-      {
-        name: "Documentos",
-        href: "/documentos",
-        icon: FileText,
-      },
-      {
-        name: "Certificaciones",
-        href: "/certificaciones",
-        icon: Award,
-      },
-      {
-        name: "Cumplimiento",
-        href: "/cumplimiento",
-        icon: Shield,
-      },
-    ],
+    title: "Personal",
+    href: "/personnel",
+    icon: Users,
+    badge: null
   },
   {
-    title: "Operaciones",
-    items: [
-      {
-        name: "Proyectos",
-        href: "/proyectos",
-        icon: FolderOpen,
-      },
-      {
-        name: "Cuadrillas",
-        href: "/cuadrillas",
-        icon: UsersIcon,
-      },
-      {
-        name: "Órdenes de Trabajo",
-        href: "/ordenes-trabajo",
-        icon: Zap,
-      },
-      {
-        name: "Rutas Optimizadas",
-        href: "/rutas",
-        icon: MapPin,
-      },
-      {
-        name: "Transformadores",
-        href: "/transformadores",
-        icon: Zap,
-      },
-      {
-        name: "Procedimientos",
-        href: "/procedimientos",
-        icon: BookOpen,
-      },
-      {
-        name: "Asignaciones",
-        href: "/asignaciones",
-        icon: Calendar,
-      },
-      {
-        name: "Equipo de Seguridad",
-        href: "/equipos",
-        icon: HardHat,
-      },
-    ],
+    title: "Proyectos",
+    href: "/projects",
+    icon: Building,
+    badge: null
+  },
+  {
+    title: "Documentos",
+    href: "/documents",
+    icon: FileText,
+    badge: null
+  },
+  {
+    title: "Cumplimiento",
+    href: "/compliance",
+    icon: Shield,
+    badge: null
+  },
+  {
+    title: "Equipos",
+    href: "/crews",
+    icon: Zap,
+    badge: null
+  },
+  {
+    title: "Órdenes de Trabajo",
+    href: "/work-orders",
+    icon: ClipboardList,
+    badge: null
+  },
+  {
+    title: "Rutas",
+    href: "/routes",
+    icon: Route,
+    badge: null
+  },
+  {
+    title: "Transformadores",
+    href: "/transformers",
+    icon: Wrench,
+    badge: null
+  },
+  {
+    title: "Procedimientos",
+    href: "/procedures",
+    icon: BookOpen,
+    badge: null
+  },
+  {
+    title: "Alertas",
+    href: "/alerts",
+    icon: AlertTriangle,
+    badge: "new"
   },
   {
     title: "Reportes",
-    items: [
-      {
-        name: "Reportes",
-        href: "/reportes",
-        icon: BarChart3,
-      },
-      {
-        name: "Exportar Datos",
-        href: "/exportar",
-        icon: Download,
-      },
-    ],
+    href: "/reports",
+    icon: BarChart3,
+    badge: null
   },
+  {
+    title: "Configuración",
+    href: "/settings",
+    icon: Settings,
+    badge: null
+  }
 ];
 
 export default function Sidebar() {
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [location] = useLocation();
-  
-  const { data: stats } = useQuery({
-    queryKey: ['/api/dashboard/stats'],
-  });
-
-  const personalAlerts = (stats as any)?.expiredDocs || 0;
 
   return (
-    <aside className="w-64 bg-white shadow-lg">
-      <nav className="mt-4">
-        {menuItems.map((section) => (
-          <div key={section.title}>
-            <div className="px-4 py-2">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                {section.title}
-              </h3>
-            </div>
-            {section.items.map((item) => {
-              const Icon = item.icon;
-              const isActive = location === item.href;
-              const alertCount = item.badge === "personalAlerts" ? personalAlerts : 0;
-              
-              return (
-                <Link key={item.name} href={item.href}>
+    <div className={cn(
+      "relative bg-white border-r border-gray-200 transition-all duration-300",
+      isCollapsed ? "w-16" : "w-64"
+    )}>
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        {!isCollapsed && (
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">PROSECU</h2>
+            <p className="text-xs text-gray-500">GC Electric</p>
+          </div>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="ml-auto"
+        >
+          {isCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
+        </Button>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-4">
+        <ul className="space-y-2">
+          {navigationItems.map((item) => {
+            const IconComponent = item.icon;
+            const isActive = location === item.href;
+            
+            return (
+              <li key={item.href}>
+                <Link href={item.href}>
                   <div
                     className={cn(
-                      "flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer",
-                      isActive && "bg-blue-50 border-r-2 border-primary text-primary"
+                      "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors cursor-pointer",
+                      "hover:bg-gray-100",
+                      isActive 
+                        ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700" 
+                        : "text-gray-700"
                     )}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span className="ml-3">{item.name}</span>
-                    {alertCount > 0 && (
-                      <Badge 
-                        variant="secondary" 
-                        className="ml-auto bg-warning text-white"
-                      >
-                        {alertCount}
-                      </Badge>
+                    <IconComponent className="h-5 w-5 flex-shrink-0" />
+                    {!isCollapsed && (
+                      <>
+                        <span className="flex-1 text-sm font-medium">
+                          {item.title}
+                        </span>
+                        {item.badge && (
+                          <Badge 
+                            variant={item.badge === "new" ? "destructive" : "secondary"} 
+                            className="text-xs"
+                          >
+                            {item.badge === "new" ? "!" : item.badge}
+                          </Badge>
+                        )}
+                      </>
                     )}
                   </div>
                 </Link>
-              );
-            })}
-          </div>
-        ))}
+              </li>
+            );
+          })}
+        </ul>
       </nav>
-    </aside>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-gray-200">
+        {!isCollapsed && (
+          <div className="text-xs text-gray-500 text-center">
+            <p>Sistema de Gestión</p>
+            <p>Versión 2.0</p>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
