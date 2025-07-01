@@ -143,4 +143,5 @@ PROSECU is a comprehensive personnel management system designed for construction
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Technology stack preference: **Node.js + PostgreSQL + Vercel/Railway** - Selected for faster development, lower costs, and flexibility for rapid changes. This stack provides the best balance of development speed and scalability for PROSECU.
 Technology exploration: Successfully implemented .NET version of PROSECU Personnel Management system using ASP.NET Core 8, Entity Framework Core, and ASP.NET Core Identity. The .NET implementation provides enterprise-grade alternative with strong typing, better performance, comprehensive authentication, and mature ecosystem. Located in `dotnet-prosecu/` directory with complete project structure, models, controllers, and documentation.
